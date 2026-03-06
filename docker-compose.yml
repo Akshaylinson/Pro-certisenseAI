@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - DATABASE_URL=sqlite:///data/certisense.db
+    networks:
+      - certisense-network
+
+  frontend:
+    build:
+      context: ./frontend/web
+      dockerfile: Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - certisense-network
+
+volumes:
+  data:
+
+networks:
+  certisense-network:
+    driver: bridge

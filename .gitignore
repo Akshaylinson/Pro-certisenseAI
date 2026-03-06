@@ -1,0 +1,162 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual Environments
+.venv
+venv/
+ENV/
+env/
+.virtualenv
+
+# FastAPI / Uvicorn
+*.log
+logs/
+*.pid
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+certisense.db
+data/*.db
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+*.env
+
+# Node.js / React / Vite
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+dist/
+dist-ssr/
+*.local
+
+# React Build
+frontend/web/dist/
+frontend/web/build/
+frontend/web/.vite/
+
+# Blockchain / Hardhat
+blockchain/node_modules/
+blockchain/cache/
+blockchain/artifacts/
+blockchain/coverage/
+blockchain/typechain/
+blockchain/typechain-types/
+.openzeppelin/
+
+# AI Models (large files)
+*.gguf
+*.bin
+*.pt
+*.pth
+*.h5
+*.pkl
+*.joblib
+backend/models/*.gguf
+backend/models/*.bin
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# OS
+Thumbs.db
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Certificates & Keys
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+
+# Uploads & Temporary Files
+uploads/
+temp/
+tmp/
+*.tmp
+*.bak
+*.cache
+
+# Docker
+.dockerignore
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.hypothesis/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+# Documentation Build
+docs/_build/
+site/
+
+# Blockchain Private Keys & Secrets
+.secret
+hardhat.config.local.js
+.infura-key
+.alchemy-key
+
+# Logs
+*.log
+logs/
+audit_logs/
+
+# Generated PDFs
+*.pdf
+!SYNOPSIS_CertiSense_AI_v3.0.pdf
+
+# CSV Data (except templates)
+*.csv
+!backend/models/chatbot_data.csv
+
+# Backup Files
+*.backup
+*.old

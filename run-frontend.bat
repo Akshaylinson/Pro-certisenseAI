@@ -1,0 +1,11 @@
+@echo off
+echo 🚀 Starting Frontend Container...
+
+REM Build frontend image
+docker build -t certisense-frontend ./frontend/web
+
+REM Run frontend container
+docker run -d --name certisense-frontend -p 5173:5173 -e VITE_API_URL=http://localhost:8000 certisense-frontend
+
+echo ✅ Frontend running at http://localhost:5173
+pause

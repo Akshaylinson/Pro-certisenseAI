@@ -1,0 +1,13 @@
+fastapi
+uvicorn[standard]
+python-dotenv
+web3==6.3.0
+eth-account
+pydantic
+pycryptodome
+requests
+python-multipart
+PyJWT
+passlib[bcrypt]
+sqlalchemy
+alembic
