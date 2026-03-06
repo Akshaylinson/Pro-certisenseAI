@@ -10,31 +10,57 @@ export const useAuth = () => {
   return context;
 };
 
+// Helper functions for role-specific token management
+const getTokenKey = (role) => `${role}_token`;
+
+const getStoredToken = (role) => {
+  if (!role) return null;
+  return localStorage.getItem(getTokenKey(role));
+};
+
+const setStoredToken = (role, token) => {
+  localStorage.setItem(getTokenKey(role), token);
+};
+
+const removeStoredToken = (role) => {
+  localStorage.removeItem(getTokenKey(role));
+};
+
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token'));
+  const [token, setToken] = useState(null);
 
+  // Initialize from stored tokens on mount
   useEffect(() => {
-    if (token) {
-      try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        setUser({ id: payload.user_id, role: payload.role });
-      } catch (error) {
-        localStorage.removeItem('token');
-        setToken(null);
+    const roles = ['admin', 'institute', 'student', 'verifier'];
+    for (const role of roles) {
+      const storedToken = getStoredToken(role);
+      if (storedToken) {
+        try {
+          const payload = JSON.parse(atob(storedToken.split('.')[1]));
+          if (payload.role === role) {
+            setToken(storedToken);
+            setUser({ id: payload.user_id, role: payload.role });
+            break;
+          }
+        } catch (error) {
+          removeStoredToken(role);
+        }
       }
     }
-  }, [token]);
+  }, []);
 
   const login = (accessToken, role) => {
-    localStorage.setItem('token', accessToken);
+    setStoredToken(role, accessToken);
     setToken(accessToken);
     const payload = JSON.parse(atob(accessToken.split('.')[1]));
     setUser({ id: payload.user_id, role });
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
+    if (user?.role) {
+      removeStoredToken(user.role);
+    }
     setToken(null);
     setUser(null);
   };

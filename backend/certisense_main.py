@@ -277,47 +277,95 @@ async def update_student(student_id: str, name: str = Query(...), email: str = Q
         db.close()
 
 @app.post("/institute/certificates")
-async def issue_certificate(file: UploadFile = File(...), student_id: str = Query(...), institute = Depends(require_institute)):
+async def issue_certificate(
+    file: UploadFile = File(...),
+    student_id: str = Query(...),
+    institute = Depends(require_institute)
+):
+    """Issue a certificate to a student"""
     db = get_db_session()
     try:
+        print(f"\n=== Certificate Issuance Started ===")
+        print(f"Institute ID: {institute['user_id']}")
+        print(f"Student ID: {student_id}")
+        print(f"File: {file.filename}")
+        
+        # Validate file
+        if not file:
+            raise HTTPException(status_code=400, detail="Certificate file missing")
+        
+        # Read file content
         content = await file.read()
+        print(f"File size: {len(content)} bytes")
+        
+        if len(content) == 0:
+            raise HTTPException(status_code=400, detail="Certificate file is empty")
+        
+        # Generate hash
         file_hash = generate_file_hash(content)
+        print(f"File hash: {file_hash}")
+        
+        # Check for duplicate certificate hash
+        existing_cert = db.query(Certificate).filter(Certificate.hash == file_hash).first()
+        if existing_cert:
+            print(f"❌ Duplicate certificate hash detected: {file_hash}")
+            raise HTTPException(status_code=400, detail="This certificate has already been issued")
         
         # Validate certificate content
+        print("Validating certificate content...")
         ai_result = AIValidationService.validate_certificate_content(content, file.filename)
         if not ai_result["valid"]:
+            print(f"AI validation failed: {ai_result['reason']}")
             raise HTTPException(status_code=400, detail=f"Invalid certificate: {ai_result['reason']}")
+        print("AI validation passed")
         
         # Find student by student_id string (e.g., "INST00001-00001")
+        print(f"Looking up student with ID: {student_id}")
         student = db.query(Student).filter(Student.student_id == student_id).first()
         if not student:
+            print(f"Student not found: {student_id}")
             raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
+        print(f"Student found: {student.name} (UUID: {student.id})")
         
         # Verify student belongs to this institute
         if student.institute_id != institute["user_id"]:
+            print(f"Student belongs to different institute: {student.institute_id}")
             raise HTTPException(status_code=403, detail="Student does not belong to your institute")
+        print("Student ownership verified")
         
         # Store certificate hash in blockchain
-        chain_hash = BlockchainService.store_certificate_hash(file_hash, student_id, institute["user_id"], institute["user_id"])
+        print("Storing certificate in blockchain...")
+        chain_hash = BlockchainService.store_certificate_hash(
+            file_hash, 
+            student_id, 
+            institute["user_id"], 
+            institute["user_id"]
+        )
+        print(f"Blockchain chain hash: {chain_hash}")
         
-        # Save certificate to DATABASE
-        cert_id = str(uuid.uuid4())
+        # Generate unique certificate ID
+        cert_id = f"CERT-{uuid.uuid4().hex[:12].upper()}"
+        print(f"Creating certificate record with ID: {cert_id}")
+        
         new_cert = Certificate(
             id=cert_id,
             name=file.filename,
             hash=file_hash,
             chain_hash=chain_hash,
-            student_id=student.id,  # Use student UUID, not student_id string
+            student_id=student.id,
             institute_id=institute["user_id"],
             issuer_id=institute["user_id"],
             status=CertificateStatusEnum.ACTIVE,
             issue_date=datetime.utcnow(),
             created_at=datetime.utcnow()
         )
+        
         db.add(new_cert)
         db.commit()
+        db.refresh(new_cert)
         
-        print(f"Certificate saved to database: {cert_id} for student {student.student_id}")
+        print(f"✅ Certificate saved successfully: {cert_id}")
+        print(f"=== Certificate Issuance Completed ===\n")
         
         return {
             "message": "Certificate issued successfully",
@@ -325,10 +373,16 @@ async def issue_certificate(file: UploadFile = File(...), student_id: str = Quer
             "hash": file_hash,
             "chain_hash": chain_hash
         }
-    except HTTPException:
+        
+    except HTTPException as he:
+        print(f"❌ HTTP Exception: {he.detail}")
+        db.rollback()
         raise
     except Exception as e:
-        print(f"Error issuing certificate: {str(e)}")
+        print(f"❌ Unexpected error issuing certificate: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
         raise HTTPException(status_code=500, detail=f"Certificate issuance failed: {str(e)}")
     finally:

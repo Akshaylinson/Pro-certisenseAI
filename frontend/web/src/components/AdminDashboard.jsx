@@ -17,7 +17,7 @@ const AdminDashboard = () => {
   const [showVerifierForm, setShowVerifierForm] = useState(false);
   const [formData, setFormData] = useState({});
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('admin_token');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
@@ -202,7 +202,7 @@ const AdminDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('admin_token');
     window.location.href = '/';
   };
 

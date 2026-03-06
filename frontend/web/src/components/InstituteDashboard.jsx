@@ -149,20 +149,33 @@ const InstituteDashboard = () => {
     formData.append('file', certificateFile);
 
     try {
+      console.log('Issuing certificate...');
+      console.log('Student ID:', selectedStudent);
+      console.log('File:', certificateFile.name);
+      
       const response = await fetch(`http://localhost:8000/institute/certificates?student_id=${encodeURIComponent(selectedStudent)}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
 
+      console.log('Response status:', response.status);
+      
       if (response.ok) {
+        const result = await response.json();
+        console.log('Certificate issued successfully:', result);
         setCertificateFile(null);
         setSelectedStudent('');
         loadDashboard();
-        alert('Certificate issued successfully');
+        alert(`Certificate issued successfully!\nCertificate ID: ${result.certificate_id}\nHash: ${result.hash.substring(0, 16)}...`);
+      } else {
+        const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
+        console.error('Certificate issuance failed:', errorData);
+        alert(`Error issuing certificate: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (error) {
-      alert('Error issuing certificate');
+      console.error('Certificate issuance error:', error);
+      alert(`Error issuing certificate: ${error.message}`);
     }
   };
 
