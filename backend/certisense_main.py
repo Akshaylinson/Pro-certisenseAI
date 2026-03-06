@@ -84,6 +84,7 @@ async def institute_register(request: InstituteRegisterRequest):
 
 @app.post("/auth/institute/login")
 async def institute_login(request: LoginRequest):
+    # Institute uses email as username
     token = authenticate_institute(request.username, request.password)
     if not token:
         raise HTTPException(status_code=401, detail="Invalid institute credentials")
