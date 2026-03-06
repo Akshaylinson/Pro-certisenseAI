@@ -1,18 +1,57 @@
-import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:8001';
 
 const VerifierDashboard = () => {
-  const { user, token, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState('verify');
+  const [activeModule, setActiveModule] = useState('dashboard');
+  const [dashboardStats, setDashboardStats] = useState(null);
   const [verificationResult, setVerificationResult] = useState(null);
+  const [history, setHistory] = useState([]);
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [chatMessage, setChatMessage] = useState('');
-  const [chatResponse, setChatResponse] = useState('');
-  const [isChatLoading, setIsChatLoading] = useState(false);
-  const [feedback, setFeedback] = useState({ message: '', category: 'verification' });
 
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
+  const token = localStorage.getItem('token');
+  const headers = { Authorization: `Bearer ${token}` };
+
+  useEffect(() => {
+    if (activeModule === 'dashboard') loadDashboard();
+    else if (activeModule === 'history') loadHistory();
+    else if (activeModule === 'feedback') loadFeedbacks();
+  }, [activeModule]);
+
+  const loadDashboard = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/verifier/dashboard`, { headers });
+      setDashboardStats(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadHistory = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/verifier/history`, { headers });
+      setHistory(res.data.history);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const loadFeedbacks = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/verifier/feedback`, { headers });
+      setFeedbacks(res.data.feedbacks);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleVerifyCertificate = async (e) => {
+    e.preventDefault();
+    const file = e.target.certificate.files[0];
     if (!file) return;
 
     setLoading(true);
@@ -20,321 +59,363 @@ const VerifierDashboard = () => {
     formData.append('file', file);
 
     try {
-      const response = await fetch('http://localhost:8000/verifier/verify', {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-      
-      const result = await response.json();
-      setVerificationResult(result);
-    } catch (error) {
-      setVerificationResult({ error: 'Verification failed' });
-    } finally {
-      setLoading(false);
+      const res = await axios.post(`${API_URL}/verifier/verify`, formData, { headers });
+      setVerificationResult(res.data);
+      alert(`Verification Result: ${res.data.verification_result.toUpperCase()}`);
+    } catch (err) {
+      alert('Verification failed: ' + (err.response?.data?.detail || 'Error'));
+    }
+    setLoading(false);
+  };
+
+  const generateProof = async (verificationId) => {
+    try {
+      const res = await axios.post(`${API_URL}/verifier/proof/generate/${verificationId}`, {}, { headers });
+      alert('Proof generated successfully!');
+      console.log('Proof:', res.data);
+    } catch (err) {
+      alert('Proof generation failed');
     }
   };
 
-  const handleChatSubmit = async (e) => {
+  const viewAIAnalysis = async (verificationId) => {
+    try {
+      const res = await axios.get(`${API_URL}/verifier/ai-analysis/${verificationId}`, { headers });
+      alert(`AI Analysis:\nConfidence: ${(res.data.confidence_score * 100).toFixed(1)}%\nResult: ${res.data.ai_validation_result}`);
+    } catch (err) {
+      alert('Failed to load AI analysis');
+    }
+  };
+
+  const viewBlockchainDetails = async (certHash) => {
+    try {
+      const res = await axios.get(`${API_URL}/verifier/blockchain/${certHash}`, { headers });
+      alert(`Blockchain Details:\nHash: ${res.data.blockchain_hash}\nStatus: ${res.data.status}\nValid: ${res.data.valid}`);
+    } catch (err) {
+      alert('Failed to load blockchain details');
+    }
+  };
+
+  const submitFeedback = async (e) => {
     e.preventDefault();
-    if (!chatMessage.trim()) return;
+    const formData = new FormData(e.target);
     
-    setIsChatLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/chatbot', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ 
-          message: chatMessage,
-          user_role: 'verifier',
-          user_id: user?.id || 'verifier'
-        })
-      });
-      
-      const result = await response.json();
-      setChatResponse(result.response || result.text_visualization || 'Response received');
-      setChatMessage('');
-    } catch (error) {
-      setChatResponse('Error processing query: ' + error.message);
-    } finally {
-      setIsChatLoading(false);
+      await axios.post(`${API_URL}/verifier/feedback?feedback_type=${formData.get('type')}&message=${formData.get('message')}&priority=${formData.get('priority')}`, {}, { headers });
+      alert('Feedback submitted successfully');
+      e.target.reset();
+      loadFeedbacks();
+    } catch (err) {
+      alert('Feedback submission failed');
     }
   };
 
-  const handleFeedbackSubmit = async (e) => {
-    e.preventDefault();
+  const sendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMessage = { role: 'user', content: chatInput };
+    setChatMessages([...chatMessages, userMessage]);
+
     try {
-      const response = await fetch(`http://localhost:8000/verifier/feedback?message=${encodeURIComponent(feedback.message)}&category=${feedback.category}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` }
-      });
-      
-      if (response.ok) {
-        alert('Feedback submitted successfully');
-        setFeedback({ message: '', category: 'verification' });
-      }
-    } catch (error) {
-      alert('Error submitting feedback');
+      const res = await axios.post(`${API_URL}/verifier/chatbot?message=${encodeURIComponent(chatInput)}`, {}, { headers });
+      const botMessage = { role: 'bot', content: res.data.response };
+      setChatMessages([...chatMessages, userMessage, botMessage]);
+    } catch (err) {
+      const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error.' };
+      setChatMessages([...chatMessages, userMessage, errorMessage]);
     }
+
+    setChatInput('');
   };
 
-  const renderVerification = () => (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Certificate Verification</h3>
-        
-        <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-          <input
-            type="file"
-            accept=".pdf,.jpg,.png"
-            onChange={handleFileUpload}
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-          />
-          <p className="mt-2 text-sm text-gray-600">
-            Upload a certificate file (PDF, JPG, PNG) to verify its authenticity
-          </p>
-        </div>
-      </div>
-
-      {loading && (
-        <div className="text-center py-8">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2">Verifying certificate...</p>
-        </div>
-      )}
-
-      {verificationResult && !loading && (
-        <div className="bg-white border rounded-lg p-6">
-          <div className="flex items-center mb-4">
-            <div className={`w-4 h-4 rounded-full mr-3 ${
-              verificationResult.result ? 'bg-green-500' : 'bg-red-500'
-            }`}></div>
-            <h4 className="text-lg font-semibold">
-              {verificationResult.result ? 'Certificate Verified ✓' : 'Certificate Invalid ✗'}
-            </h4>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <span className="font-medium">Hash:</span>
-              <p className="text-sm text-gray-600 font-mono">{verificationResult.hash}</p>
-            </div>
-
-            {verificationResult.explanation && (
-              <div>
-                <span className="font-medium">AI Explanation:</span>
-                <p className="text-sm text-gray-700 mt-1">{verificationResult.explanation}</p>
-              </div>
-            )}
-
-            {verificationResult.ai_validation && (
-              <div>
-                <span className="font-medium">AI Validation:</span>
-                <div className="mt-2 bg-gray-50 p-3 rounded">
-                  <p className="text-sm">
-                    <span className="font-medium">Confidence:</span> {(verificationResult.ai_validation.confidence * 100).toFixed(1)}%
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Format Valid:</span> {verificationResult.ai_validation.format_valid ? 'Yes' : 'No'}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Keywords Found:</span> {verificationResult.ai_validation.keywords_found ? 'Yes' : 'No'}
-                  </p>
-                  {verificationResult.ai_validation.validation_token && (
-                    <p className="text-sm">
-                      <span className="font-medium">Validation Token:</span> {verificationResult.ai_validation.validation_token}
-                    </p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {verificationResult.blockchain_data && (
-              <div>
-                <span className="font-medium">Blockchain Data:</span>
-                <div className="mt-2 bg-gray-50 p-3 rounded">
-                  <p className="text-sm">
-                    <span className="font-medium">Issuer:</span> {verificationResult.blockchain_data.issuer_id}
-                  </p>
-                  <p className="text-sm">
-                    <span className="font-medium">Registered:</span> {new Date(verificationResult.blockchain_data.timestamp).toLocaleString()}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-
-  const renderChatbot = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">AI Assistant</h3>
-      <p className="text-sm text-gray-600">
-        Ask questions about blockchain records, certificate validity, or verification processes.
-      </p>
-      
-      <form onSubmit={handleChatSubmit} className="space-y-3">
-        <textarea
-          value={chatMessage}
-          onChange={(e) => setChatMessage(e.target.value)}
-          placeholder="Ask about certificate verification, blockchain records, or system processes..."
-          className="w-full p-3 border rounded-lg resize-none"
-          rows="3"
-          disabled={isChatLoading}
-        />
-        <button
-          type="submit"
-          disabled={isChatLoading || !chatMessage.trim()}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center space-x-2"
-        >
-          {isChatLoading ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-              <span>Processing...</span>
-            </>
-          ) : (
-            <span>Ask AI</span>
-          )}
-        </button>
-      </form>
-
-      {isChatLoading && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <div className="flex items-center space-x-3">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-            </div>
-            <span className="text-blue-700 font-medium">🤖 AI is analyzing your question...</span>
-          </div>
-        </div>
-      )}
-
-      {chatResponse && !isChatLoading && (
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <p className="font-medium text-blue-800 mb-2">🤖 AI Response:</p>
-          <div className="text-blue-700 whitespace-pre-wrap">{chatResponse}</div>
-        </div>
-      )}
-
-      <div className="mt-6 bg-gray-50 p-4 rounded-lg">
-        <h4 className="font-medium mb-2">Sample Questions:</h4>
-        <ul className="text-sm text-gray-600 space-y-1">
-          <li>• How many certificates are registered on the blockchain?</li>
-          <li>• What happens when a certificate is invalid?</li>
-          <li>• How does the verification process work?</li>
-          <li>• What is blockchain hash verification?</li>
-        </ul>
-      </div>
-    </div>
-  );
-
-  const renderFeedback = () => (
-    <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Submit Feedback</h3>
-      <p className="text-sm text-gray-600">
-        Share your experience with the verification process or report any issues.
-      </p>
-      
-      <form onSubmit={handleFeedbackSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Category
-          </label>
-          <select
-            value={feedback.category}
-            onChange={(e) => setFeedback(prev => ({ ...prev, category: e.target.value }))}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md"
-          >
-            <option value="verification">Verification Process</option>
-            <option value="certificate_issues">Certificate Issues</option>
-            <option value="system_experience">System Experience</option>
-            <option value="feature_request">Feature Request</option>
-            <option value="bug_report">Bug Report</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Message
-          </label>
-          <textarea
-            value={feedback.message}
-            onChange={(e) => setFeedback(prev => ({ ...prev, message: e.target.value }))}
-            placeholder="Describe your feedback in detail..."
-            className="w-full p-3 border rounded-lg resize-none"
-            rows="4"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Submit Feedback
-        </button>
-      </form>
-    </div>
-  );
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    window.location.href = '/';
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold">Verifier Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Welcome, {user?.id}</span>
-              <button
-                onClick={logout}
-                className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-              >
-                Logout
-              </button>
-            </div>
+    <div className="min-h-screen bg-gray-100">
+      {/* Navigation */}
+      <nav className="bg-green-600 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold">🔍 CertiSense Verifier</h1>
+            <p className="text-sm text-green-200">Certificate Verification Platform</p>
           </div>
+          <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg font-semibold transition">
+            Logout
+          </button>
         </div>
       </nav>
 
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="flex space-x-8">
-          <div className="w-64">
-            <nav className="space-y-1">
+      <div className="container mx-auto mt-6 px-4">
+        <div className="flex gap-6">
+          {/* Sidebar */}
+          <div className="w-64 bg-white rounded-lg shadow-lg p-4 h-fit">
+            <h2 className="font-bold text-lg mb-4 text-gray-700">Verifier Modules</h2>
+            <ul className="space-y-2">
               {[
-                { key: 'verify', label: 'Verify Certificate' },
-                { key: 'chatbot', label: 'AI Assistant' },
-                { key: 'feedback', label: 'Submit Feedback' }
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                    activeTab === tab.key
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.label}
-                </button>
+                { id: 'dashboard', label: '📊 Dashboard' },
+                { id: 'verify', label: '✅ Verify Certificate' },
+                { id: 'history', label: '📜 History' },
+                { id: 'feedback', label: '💬 Feedback' },
+                { id: 'chatbot', label: '🤖 Chatbot' }
+              ].map(mod => (
+                <li key={mod.id}>
+                  <button
+                    onClick={() => setActiveModule(mod.id)}
+                    className={`w-full text-left px-4 py-3 rounded-lg transition ${
+                      activeModule === mod.id ? 'bg-green-500 text-white shadow-md' : 'hover:bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    {mod.label}
+                  </button>
+                </li>
               ))}
-            </nav>
+            </ul>
           </div>
 
-          <div className="flex-1">
-            <div className="bg-white shadow rounded-lg p-6">
-              {activeTab === 'verify' && renderVerification()}
-              {activeTab === 'chatbot' && renderChatbot()}
-              {activeTab === 'feedback' && renderFeedback()}
-            </div>
+          {/* Main Content */}
+          <div className="flex-1 bg-white rounded-lg shadow-lg p-6">
+            {/* MODULE 1: Dashboard */}
+            {activeModule === 'dashboard' && dashboardStats && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verifier Dashboard</h2>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  <div className="bg-gradient-to-br from-green-400 to-green-600 text-white p-6 rounded-lg shadow">
+                    <h3 className="text-sm font-semibold mb-2">Total Verifications</h3>
+                    <p className="text-4xl font-bold">{dashboardStats.statistics.total_verifications}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-lg shadow">
+                    <h3 className="text-sm font-semibold mb-2">Valid Certificates</h3>
+                    <p className="text-4xl font-bold">{dashboardStats.statistics.valid_certificates}</p>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6 rounded-lg shadow">
+                    <h3 className="text-sm font-semibold mb-2">Success Rate</h3>
+                    <p className="text-4xl font-bold">{dashboardStats.success_rate.toFixed(1)}%</p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                    <h3 className="font-bold mb-2">Invalid Certificates</h3>
+                    <p className="text-2xl font-bold text-red-600">{dashboardStats.statistics.invalid_certificates}</p>
+                  </div>
+                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                    <h3 className="font-bold mb-2">Tampered Certificates</h3>
+                    <p className="text-2xl font-bold text-orange-600">{dashboardStats.statistics.tampered_certificates}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* MODULE 2: Verify Certificate */}
+            {activeModule === 'verify' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verify Certificate</h2>
+                
+                <form onSubmit={handleVerifyCertificate} className="space-y-6">
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <input
+                      type="file"
+                      name="certificate"
+                      accept=".pdf,.jpg,.jpeg,.png"
+                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                      required
+                    />
+                    <p className="mt-2 text-sm text-gray-500">Upload certificate (PDF, JPG, PNG)</p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className={`w-full py-3 rounded-lg font-semibold text-white transition ${
+                      loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
+                    }`}
+                  >
+                    {loading ? 'Verifying...' : 'Verify Certificate'}
+                  </button>
+                </form>
+
+                {verificationResult && (
+                  <div className="mt-6 bg-gray-50 p-6 rounded-lg border">
+                    <h3 className="font-bold text-lg mb-4">Verification Result</h3>
+                    <div className="space-y-2">
+                      <p><strong>Result:</strong> <span className={`px-3 py-1 rounded ${
+                        verificationResult.verification_result === 'valid' ? 'bg-green-100 text-green-800' :
+                        verificationResult.verification_result === 'invalid' ? 'bg-red-100 text-red-800' :
+                        'bg-orange-100 text-orange-800'
+                      }`}>{verificationResult.verification_result.toUpperCase()}</span></p>
+                      <p><strong>Confidence:</strong> {(verificationResult.confidence_score * 100).toFixed(1)}%</p>
+                      <p><strong>Blockchain Verified:</strong> {verificationResult.blockchain_verified ? '✅ Yes' : '❌ No'}</p>
+                      <p><strong>Processing Time:</strong> {verificationResult.processing_time.toFixed(2)}s</p>
+                      
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          onClick={() => generateProof(verificationResult.verification_id)}
+                          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                        >
+                          Generate Proof
+                        </button>
+                        <button
+                          onClick={() => viewAIAnalysis(verificationResult.verification_id)}
+                          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
+                        >
+                          AI Analysis
+                        </button>
+                        <button
+                          onClick={() => viewBlockchainDetails(verificationResult.certificate_hash)}
+                          className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
+                        >
+                          Blockchain Details
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* MODULE 3: Verification History */}
+            {activeModule === 'history' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verification History</h2>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full border-collapse">
+                    <thead>
+                      <tr className="bg-gray-200">
+                        <th className="p-3 text-left">Verification ID</th>
+                        <th className="p-3 text-left">Certificate Hash</th>
+                        <th className="p-3 text-center">Result</th>
+                        <th className="p-3 text-center">Confidence</th>
+                        <th className="p-3 text-left">Timestamp</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {history.map(h => (
+                        <tr key={h.verification_id} className="border-b hover:bg-gray-50">
+                          <td className="p-3 font-mono text-xs">{h.verification_id.slice(0, 12)}...</td>
+                          <td className="p-3 font-mono text-xs">{h.certificate_hash}</td>
+                          <td className="p-3 text-center">
+                            <span className={`px-2 py-1 rounded text-xs ${
+                              h.verification_result === 'valid' ? 'bg-green-100 text-green-800' :
+                              h.verification_result === 'invalid' ? 'bg-red-100 text-red-800' :
+                              'bg-orange-100 text-orange-800'
+                            }`}>
+                              {h.verification_result}
+                            </span>
+                          </td>
+                          <td className="p-3 text-center">{(h.confidence_score * 100).toFixed(1)}%</td>
+                          <td className="p-3 text-sm">{new Date(h.timestamp).toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* MODULE 4: Submit Feedback */}
+            {activeModule === 'feedback' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">Submit Feedback</h2>
+                
+                <form onSubmit={submitFeedback} className="space-y-4 mb-8">
+                  <div>
+                    <label className="block font-semibold mb-2">Feedback Type</label>
+                    <select name="type" className="w-full px-4 py-2 border rounded-lg" required>
+                      <option value="suspicious">Suspicious Certificate</option>
+                      <option value="issue">Verification Issue</option>
+                      <option value="general">General Feedback</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-2">Priority</label>
+                    <select name="priority" className="w-full px-4 py-2 border rounded-lg">
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold mb-2">Message</label>
+                    <textarea
+                      name="message"
+                      rows="4"
+                      className="w-full px-4 py-2 border rounded-lg"
+                      placeholder="Describe your feedback..."
+                      required
+                    ></textarea>
+                  </div>
+
+                  <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
+                    Submit Feedback
+                  </button>
+                </form>
+
+                <h3 className="font-bold text-xl mb-4">My Feedback</h3>
+                <div className="space-y-3">
+                  {feedbacks.map(fb => (
+                    <div key={fb.id} className="bg-gray-50 p-4 rounded-lg border">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="font-semibold">{fb.feedback_type}</p>
+                          <p className="text-sm text-gray-600">{fb.message}</p>
+                        </div>
+                        <span className={`px-2 py-1 rounded text-xs ${
+                          fb.priority === 'high' ? 'bg-red-100 text-red-800' :
+                          fb.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                        }`}>
+                          {fb.priority}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">{new Date(fb.timestamp).toLocaleString()}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* MODULE 5: Chatbot */}
+            {activeModule === 'chatbot' && (
+              <div>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verification Assistant</h2>
+                
+                <div className="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4">
+                  {chatMessages.map((msg, idx) => (
+                    <div key={idx} className={`mb-3 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block px-4 py-2 rounded-lg ${
+                        msg.role === 'user' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'
+                      }`}>
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                    className="flex-1 px-4 py-2 border rounded-lg"
+                    placeholder="Ask about certificate verification..."
+                  />
+                  <button
+                    onClick={sendChatMessage}
+                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                  >
+                    Send
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
