@@ -4,6 +4,11 @@ from sqlalchemy.orm import sessionmaker, relationship
 from datetime import datetime
 import enum
 
+import os
+
+# Create data directory if it doesn't exist
+os.makedirs("data", exist_ok=True)
+
 DATABASE_URL = "sqlite:///./data/certisense.db"
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

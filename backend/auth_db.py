@@ -65,6 +65,131 @@ def require_admin(user: Dict = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
+def require_institute(user: Dict = Depends(get_current_user)):
+    if user["role"] != "institute":
+        raise HTTPException(status_code=403, detail="Institute access required")
+    return user
+
+def require_student(user: Dict = Depends(get_current_user)):
+    if user["role"] != "student":
+        raise HTTPException(status_code=403, detail="Student access required")
+    return user
+
+def require_verifier(user: Dict = Depends(get_current_user)):
+    if user["role"] != "verifier":
+        raise HTTPException(status_code=403, detail="Verifier access required")
+    return user
+
+def authenticate_institute(username: str, password: str) -> Optional[str]:
+    from database import SessionLocal, Institute
+    db = SessionLocal()
+    try:
+        institute = db.query(Institute).filter(Institute.email == username).first()
+        if institute and verify_password(password, institute.password_hash):
+            return create_access_token(institute.id, "institute", institute.email)
+        return None
+    finally:
+        db.close()
+
+def authenticate_student(username: str, password: str) -> Optional[str]:
+    from database import SessionLocal, Student
+    db = SessionLocal()
+    try:
+        student = db.query(Student).filter(Student.student_id == username).first()
+        if student and verify_password(password, student.password_hash):
+            return create_access_token(student.id, "student", student.student_id)
+        return None
+    finally:
+        db.close()
+
+def authenticate_verifier(username: str, password: str) -> Optional[str]:
+    from database import SessionLocal, Verifier
+    db = SessionLocal()
+    try:
+        verifier = db.query(Verifier).filter(Verifier.username == username).first()
+        if verifier and verify_password(password, verifier.password_hash):
+            return create_access_token(verifier.id, "verifier", verifier.username)
+        return None
+    finally:
+        db.close()
+
+def register_institute(name: str, institute_id: str, password: str, email: str, location: str = None):
+    from database import SessionLocal, Institute
+    db = SessionLocal()
+    try:
+        existing = db.query(Institute).filter(Institute.email == email).first()
+        if existing:
+            return False, None
+        
+        count = db.query(Institute).count() + 1
+        new_id = str(uuid.uuid4())
+        inst_id = f"INST{count:05d}"
+        
+        institute = Institute(
+            id=new_id,
+            institute_id=inst_id,
+            name=name,
+            email=email,
+            password_hash=hash_password(password),
+            location=location,
+            approval_status="approved",
+            is_verified=True,
+            created_at=datetime.utcnow()
+        )
+        db.add(institute)
+        db.commit()
+        return True, inst_id
+    finally:
+        db.close()
+
+def register_student(name: str, email: str, password: str, institute_id: str):
+    from database import SessionLocal, Student, Institute
+    db = SessionLocal()
+    try:
+        institute = db.query(Institute).filter(Institute.id == institute_id).first()
+        if not institute:
+            return False, None
+        
+        student_count = db.query(Student).filter(Student.institute_id == institute_id).count()
+        student_id = f"{institute.institute_id}-{str(student_count + 1).zfill(5)}"
+        
+        student = Student(
+            id=str(uuid.uuid4()),
+            student_id=student_id,
+            name=name,
+            email=email,
+            password_hash=hash_password(password),
+            institute_id=institute_id,
+            created_at=datetime.utcnow()
+        )
+        db.add(student)
+        db.commit()
+        return True, student_id
+    finally:
+        db.close()
+
+def register_verifier(username: str, password: str, email: str):
+    from database import SessionLocal, Verifier
+    db = SessionLocal()
+    try:
+        existing = db.query(Verifier).filter(Verifier.email == email).first()
+        if existing:
+            return False
+        
+        verifier = Verifier(
+            id=str(uuid.uuid4()),
+            username=username,
+            email=email,
+            password_hash=hash_password(password),
+            status="active",
+            created_at=datetime.utcnow()
+        )
+        db.add(verifier)
+        db.commit()
+        return True
+    finally:
+        db.close()
+
 def log_audit(db: Session, user_id: str, user_role: str, action: str, 
               entity_type: str, entity_id: str, details: str, ip_address: str = None):
     audit = AuditLog(
