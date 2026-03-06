@@ -467,6 +467,65 @@ async def get_certificate_details(cert_hash: str, student = Depends(require_stud
     return chain_data
 
 # Verifier Endpoints
+@app.get("/verifier/dashboard")
+async def verifier_dashboard(verifier = Depends(require_verifier)):
+    """Get verifier dashboard statistics"""
+    print(f"Verifier dashboard accessed by: {verifier}")
+    
+    # Get verifications from in-memory storage
+    verifier_verifications = [v for v in verifications_db.values() if v["verifier_id"] == verifier["user_id"]]
+    
+    total_verifications = len(verifier_verifications)
+    valid_certificates = sum(1 for v in verifier_verifications if v["result"])
+    invalid_certificates = sum(1 for v in verifier_verifications if not v["result"])
+    
+    success_rate = (valid_certificates / total_verifications * 100) if total_verifications > 0 else 0
+    
+    return {
+        "statistics": {
+            "total_verifications": total_verifications,
+            "valid_certificates": valid_certificates,
+            "invalid_certificates": invalid_certificates,
+            "tampered_certificates": 0
+        },
+        "success_rate": success_rate
+    }
+
+@app.get("/verifier/history")
+async def verifier_history(verifier = Depends(require_verifier)):
+    """Get verifier verification history"""
+    verifier_verifications = [
+        {
+            "verification_id": v["id"],
+            "certificate_hash": v["certificate_hash"],
+            "verification_result": "valid" if v["result"] else "invalid",
+            "confidence_score": v["ai_validation"].get("confidence", 0.0),
+            "timestamp": v["timestamp"]
+        }
+        for v in verifications_db.values() 
+        if v["verifier_id"] == verifier["user_id"]
+    ]
+    
+    return {"history": verifier_verifications}
+
+@app.get("/verifier/feedback")
+async def get_verifier_feedback(verifier = Depends(require_verifier)):
+    """Get verifier's submitted feedback"""
+    verifier_feedbacks = [
+        {
+            "id": f["id"],
+            "feedback_type": f["category"],
+            "message": f["message"],
+            "priority": "medium",
+            "timestamp": f["timestamp"],
+            "flagged": False
+        }
+        for f in feedback_db.values()
+        if f["verifier_id"] == verifier["user_id"]
+    ]
+    
+    return {"feedbacks": verifier_feedbacks}
+
 @app.post("/verifier/verify")
 async def verify_certificate(file: UploadFile = File(...), verifier = Depends(require_verifier)):
     content = await file.read()
@@ -494,7 +553,12 @@ async def verify_certificate(file: UploadFile = File(...), verifier = Depends(re
     
     return {
         "verification_id": verification_id,
+        "verification_result": "valid" if is_valid else "invalid",
         "result": is_valid,
+        "certificate_hash": file_hash,
+        "confidence_score": ai_result.get("confidence", 0.0),
+        "blockchain_verified": is_valid,
+        "processing_time": ai_result.get("processing_time", 0.0),
         "hash": file_hash,
         "ai_validation": ai_result,
         "blockchain_data": blockchain_data,
@@ -502,13 +566,20 @@ async def verify_certificate(file: UploadFile = File(...), verifier = Depends(re
     }
 
 @app.post("/verifier/feedback")
-async def submit_feedback(message: str = Query(...), category: str = Query(...), verifier = Depends(require_verifier)):
+async def submit_feedback(
+    feedback_type: str = Form(...),
+    message: str = Form(...),
+    priority: str = Form("medium"),
+    verifier = Depends(require_verifier)
+):
+    """Submit feedback"""
     feedback_id = str(uuid.uuid4())
     feedback_db[feedback_id] = {
         "id": feedback_id,
         "verifier_id": verifier["user_id"],
         "message": message,
-        "category": category,
+        "category": feedback_type,
+        "priority": priority,
         "timestamp": datetime.utcnow()
     }
     return {"message": "Feedback submitted successfully", "feedback_id": feedback_id}

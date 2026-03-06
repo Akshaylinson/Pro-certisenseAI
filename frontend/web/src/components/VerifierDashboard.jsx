@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8001';
+const API_URL = 'http://localhost:8000';
 
 const VerifierDashboard = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
@@ -13,7 +13,7 @@ const VerifierDashboard = () => {
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const token = localStorage.getItem('token');
+  const token = localStorage.getItem('verifier_token');
   const headers = { Authorization: `Bearer ${token}` };
 
   useEffect(() => {
@@ -98,10 +98,20 @@ const VerifierDashboard = () => {
 
   const submitFeedback = async (e) => {
     e.preventDefault();
-    const formData = new FormData(e.target);
+    const formDataObj = new FormData(e.target);
+    
+    const formData = new FormData();
+    formData.append('feedback_type', formDataObj.get('type'));
+    formData.append('message', formDataObj.get('message'));
+    formData.append('priority', formDataObj.get('priority'));
     
     try {
-      await axios.post(`${API_URL}/verifier/feedback?feedback_type=${formData.get('type')}&message=${formData.get('message')}&priority=${formData.get('priority')}`, {}, { headers });
+      await axios.post(`${API_URL}/verifier/feedback`, formData, {
+        headers: {
+          ...headers,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
       alert('Feedback submitted successfully');
       e.target.reset();
       loadFeedbacks();
@@ -129,7 +139,7 @@ const VerifierDashboard = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    localStorage.removeItem('verifier_token');
     window.location.href = '/';
   };
 
