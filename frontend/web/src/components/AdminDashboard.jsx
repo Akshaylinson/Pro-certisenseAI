@@ -13,6 +13,9 @@ const AdminDashboard = () => {
   const [verifications, setVerifications] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [showInstituteForm, setShowInstituteForm] = useState(false);
+  const [showVerifierForm, setShowVerifierForm] = useState(false);
+  const [formData, setFormData] = useState({});
 
   const token = localStorage.getItem('token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -147,6 +150,44 @@ const AdminDashboard = () => {
       loadFeedbacks();
     } catch (err) {
       alert('Flag operation failed');
+    }
+  };
+
+  const addInstitute = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_URL}/admin/institutes`, null, {
+        params: {
+          institute_name: formData.name,
+          email: formData.email,
+          password: formData.password,
+          location: formData.location
+        },
+        headers
+      });
+      alert('Institute added successfully');
+      setShowInstituteForm(false);
+      setFormData({});
+      loadInstitutes();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to add institute');
+    }
+  };
+
+  const addVerifier = async (e) => {
+    e.preventDefault();
+    try {
+      await axios.post(`${API_URL}/auth/verifier/register`, {
+        username: formData.username,
+        email: formData.email,
+        password: formData.password
+      });
+      alert('Verifier added successfully');
+      setShowVerifierForm(false);
+      setFormData({});
+      loadVerifiers();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Failed to add verifier');
     }
   };
 
@@ -291,7 +332,75 @@ const AdminDashboard = () => {
             {/* MODULE 2: Manage Institutes */}
             {activeModule === 'institutes' && !loading && (
               <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Manage Institutes</h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-3xl font-bold text-gray-800">Manage Institutes</h2>
+                  <button
+                    onClick={() => setShowInstituteForm(true)}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                  >
+                    + Add Institute
+                  </button>
+                </div>
+
+                {showInstituteForm && (
+                  <div className="mb-6 bg-gray-50 p-6 rounded-lg border">
+                    <h3 className="font-bold text-lg mb-4">Add New Institute</h3>
+                    <form onSubmit={addInstitute} className="space-y-4">
+                      <div>
+                        <label className="block font-semibold mb-2">Institute Name *</label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.name || ''}
+                          onChange={(e) => setFormData({...formData, name: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2">Email *</label>
+                        <input
+                          type="email"
+                          required
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.email || ''}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2">Password *</label>
+                        <input
+                          type="password"
+                          required
+                          minLength="6"
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.password || ''}
+                          onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2">Location</label>
+                        <input
+                          type="text"
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.location || ''}
+                          onChange={(e) => setFormData({...formData, location: e.target.value})}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                          Create Institute
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {setShowInstituteForm(false); setFormData({});}}
+                          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>
@@ -415,7 +524,66 @@ const AdminDashboard = () => {
             {/* MODULE 5: Manage Verifiers */}
             {activeModule === 'verifiers' && !loading && (
               <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Manage Verifiers</h2>
+                <div className="flex justify-between items-center mb-6">
+                  <h2 className="text-3xl font-bold text-gray-800">Manage Verifiers</h2>
+                  <button
+                    onClick={() => setShowVerifierForm(true)}
+                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                  >
+                    + Add Verifier
+                  </button>
+                </div>
+
+                {showVerifierForm && (
+                  <div className="mb-6 bg-gray-50 p-6 rounded-lg border">
+                    <h3 className="font-bold text-lg mb-4">Add New Verifier</h3>
+                    <form onSubmit={addVerifier} className="space-y-4">
+                      <div>
+                        <label className="block font-semibold mb-2">Username *</label>
+                        <input
+                          type="text"
+                          required
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.username || ''}
+                          onChange={(e) => setFormData({...formData, username: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2">Email *</label>
+                        <input
+                          type="email"
+                          required
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.email || ''}
+                          onChange={(e) => setFormData({...formData, email: e.target.value})}
+                        />
+                      </div>
+                      <div>
+                        <label className="block font-semibold mb-2">Password *</label>
+                        <input
+                          type="password"
+                          required
+                          minLength="6"
+                          className="w-full px-4 py-2 border rounded-lg"
+                          value={formData.password || ''}
+                          onChange={(e) => setFormData({...formData, password: e.target.value})}
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                          Create Verifier
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {setShowVerifierForm(false); setFormData({});}}
+                          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
                 <div className="overflow-x-auto">
                   <table className="w-full border-collapse">
                     <thead>

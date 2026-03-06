@@ -15,6 +15,7 @@ from database import get_db, Institute, Student, Verifier, Certificate, Verifica
 from blockchain_service import BlockchainService, generate_file_hash
 from ai_service import AIValidationService
 from chatbot_service import ChatbotService
+from admin_api import router as admin_router
 
 app = FastAPI(title="CertiSense AI - Enhanced Blockchain Certificate System", version="3.0.0")
 
@@ -25,6 +26,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include admin router
+app.include_router(admin_router)
 
 # In-memory storage
 certificates_db = {}
