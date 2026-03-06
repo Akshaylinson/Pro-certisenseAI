@@ -59,10 +59,15 @@ const AdminDashboard = () => {
   const loadCertificates = async () => {
     setLoading(true);
     try {
+      console.log('Loading certificates...');
       const res = await axios.get(`${API_URL}/admin/certificates`, { headers });
+      console.log('Certificates API response:', res.data);
+      console.log('Certificates array:', res.data.certificates);
       setCertificates(res.data.certificates);
+      console.log('Certificates state set to:', res.data.certificates);
     } catch (err) {
       console.error('Certificates error:', err);
+      console.error('Error response:', err.response?.data);
     }
     setLoading(false);
   };
@@ -70,10 +75,15 @@ const AdminDashboard = () => {
   const loadStudents = async () => {
     setLoading(true);
     try {
+      console.log('Loading students...');
       const res = await axios.get(`${API_URL}/admin/students`, { headers });
+      console.log('Students API response:', res.data);
+      console.log('Students array:', res.data.students);
       setStudents(res.data.students);
+      console.log('Students state set to:', res.data.students);
     } catch (err) {
       console.error('Students error:', err);
+      console.error('Error response:', err.response?.data);
     }
     setLoading(false);
   };
@@ -451,40 +461,47 @@ const AdminDashboard = () => {
             {activeModule === 'certificates' && !loading && (
               <div>
                 <h2 className="text-3xl font-bold mb-6 text-gray-800">Manage Certificates</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Certificate ID</th>
-                        <th className="p-3 text-left">Student</th>
-                        <th className="p-3 text-left">Institute</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center">Verifications</th>
-                        <th className="p-3 text-left">Issue Date</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {certificates.map(cert => (
-                        <tr key={cert.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-xs">{cert.id.slice(0, 12)}...</td>
-                          <td className="p-3">{cert.student_name}</td>
-                          <td className="p-3">{cert.institute_name}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              cert.status === 'active' ? 'bg-green-100 text-green-800' :
-                              cert.status === 'revoked' ? 'bg-red-100 text-red-800' :
-                              'bg-orange-100 text-orange-800'
-                            }`}>
-                              {cert.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center font-semibold">{cert.verification_count}</td>
-                          <td className="p-3 text-xs">{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}</td>
+                {certificates.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <p className="text-gray-600 text-lg">No certificates found in the system.</p>
+                    <p className="text-gray-500 text-sm mt-2">Certificates will appear here once institutes issue them to students.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-sm">
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="p-3 text-left">Certificate ID</th>
+                          <th className="p-3 text-left">Student</th>
+                          <th className="p-3 text-left">Institute</th>
+                          <th className="p-3 text-center">Status</th>
+                          <th className="p-3 text-center">Verifications</th>
+                          <th className="p-3 text-left">Issue Date</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {certificates.map(cert => (
+                          <tr key={cert.id} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-mono text-xs">{cert.id.slice(0, 12)}...</td>
+                            <td className="p-3">{cert.student_name}</td>
+                            <td className="p-3">{cert.institute_name}</td>
+                            <td className="p-3 text-center">
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                cert.status === 'active' ? 'bg-green-100 text-green-800' :
+                                cert.status === 'revoked' ? 'bg-red-100 text-red-800' :
+                                'bg-orange-100 text-orange-800'
+                              }`}>
+                                {cert.status}
+                              </span>
+                            </td>
+                            <td className="p-3 text-center font-semibold">{cert.verification_count}</td>
+                            <td className="p-3 text-xs">{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 
@@ -492,32 +509,39 @@ const AdminDashboard = () => {
             {activeModule === 'students' && !loading && (
               <div>
                 <h2 className="text-3xl font-bold mb-6 text-gray-800">View Students (Read-Only)</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Student ID</th>
-                        <th className="p-3 text-left">Name</th>
-                        <th className="p-3 text-left">Email</th>
-                        <th className="p-3 text-left">Institute</th>
-                        <th className="p-3 text-center">Certificates</th>
-                        <th className="p-3 text-center">Verifications</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {students.map(student => (
-                        <tr key={student.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-sm">{student.student_id}</td>
-                          <td className="p-3 font-semibold">{student.name}</td>
-                          <td className="p-3 text-sm">{student.email}</td>
-                          <td className="p-3 text-sm">{student.institute_name}</td>
-                          <td className="p-3 text-center">{student.certificate_count}</td>
-                          <td className="p-3 text-center">{student.verification_count}</td>
+                {students.length === 0 ? (
+                  <div className="text-center py-12 bg-gray-50 rounded-lg">
+                    <p className="text-gray-600 text-lg">No students found in the system.</p>
+                    <p className="text-gray-500 text-sm mt-2">Students will appear here once institutes add them.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-200">
+                          <th className="p-3 text-left">Student ID</th>
+                          <th className="p-3 text-left">Name</th>
+                          <th className="p-3 text-left">Email</th>
+                          <th className="p-3 text-left">Institute</th>
+                          <th className="p-3 text-center">Certificates</th>
+                          <th className="p-3 text-center">Verifications</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {students.map(student => (
+                          <tr key={student.id} className="border-b hover:bg-gray-50">
+                            <td className="p-3 font-mono text-sm">{student.student_id}</td>
+                            <td className="p-3 font-semibold">{student.name}</td>
+                            <td className="p-3 text-sm">{student.email}</td>
+                            <td className="p-3 text-sm">{student.institute_name}</td>
+                            <td className="p-3 text-center">{student.certificate_count}</td>
+                            <td className="p-3 text-center">{student.verification_count}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

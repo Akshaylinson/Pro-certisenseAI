@@ -11,7 +11,7 @@ from auth_db import (
     authenticate_admin, authenticate_institute, authenticate_student, authenticate_verifier,
     register_institute, register_student, register_verifier, verify_token
 )
-from database import get_db, Institute, Student, Verifier, Certificate, Verification, Feedback
+from database import get_db, Institute, Student, Verifier, Certificate, Verification, Feedback, CertificateStatusEnum
 from blockchain_service import BlockchainService, generate_file_hash
 from ai_service import AIValidationService
 from chatbot_service import ChatbotService
@@ -278,29 +278,61 @@ async def update_student(student_id: str, name: str = Query(...), email: str = Q
 
 @app.post("/institute/certificates")
 async def issue_certificate(file: UploadFile = File(...), student_id: str = Query(...), institute = Depends(require_institute)):
-    content = await file.read()
-    file_hash = generate_file_hash(content)
-    
-    ai_result = AIValidationService.validate_certificate_content(content, file.filename)
-    if not ai_result["valid"]:
-        raise HTTPException(status_code=400, detail=f"Invalid certificate: {ai_result['reason']}")
-    
-    chain_hash = BlockchainService.store_certificate_hash(file_hash, student_id, institute["user_id"], institute["user_id"])
-    
-    cert_id = str(uuid.uuid4())
-    certificates_db[cert_id] = {
-        "id": cert_id,
-        "name": file.filename,
-        "hash": file_hash,
-        "student_id": student_id,
-        "institute_id": institute["user_id"],
-        "issuer_id": institute["user_id"],
-        "chain_hash": chain_hash,
-        "created_at": datetime.utcnow(),
-        "ai_validation": ai_result
-    }
-    
-    return {"message": "Certificate issued successfully", "certificate_id": cert_id, "hash": file_hash, "chain_hash": chain_hash}
+    db = get_db_session()
+    try:
+        content = await file.read()
+        file_hash = generate_file_hash(content)
+        
+        # Validate certificate content
+        ai_result = AIValidationService.validate_certificate_content(content, file.filename)
+        if not ai_result["valid"]:
+            raise HTTPException(status_code=400, detail=f"Invalid certificate: {ai_result['reason']}")
+        
+        # Find student by student_id string (e.g., "INST00001-00001")
+        student = db.query(Student).filter(Student.student_id == student_id).first()
+        if not student:
+            raise HTTPException(status_code=404, detail=f"Student with ID {student_id} not found")
+        
+        # Verify student belongs to this institute
+        if student.institute_id != institute["user_id"]:
+            raise HTTPException(status_code=403, detail="Student does not belong to your institute")
+        
+        # Store certificate hash in blockchain
+        chain_hash = BlockchainService.store_certificate_hash(file_hash, student_id, institute["user_id"], institute["user_id"])
+        
+        # Save certificate to DATABASE
+        cert_id = str(uuid.uuid4())
+        new_cert = Certificate(
+            id=cert_id,
+            name=file.filename,
+            hash=file_hash,
+            chain_hash=chain_hash,
+            student_id=student.id,  # Use student UUID, not student_id string
+            institute_id=institute["user_id"],
+            issuer_id=institute["user_id"],
+            status=CertificateStatusEnum.ACTIVE,
+            issue_date=datetime.utcnow(),
+            created_at=datetime.utcnow()
+        )
+        db.add(new_cert)
+        db.commit()
+        
+        print(f"Certificate saved to database: {cert_id} for student {student.student_id}")
+        
+        return {
+            "message": "Certificate issued successfully",
+            "certificate_id": cert_id,
+            "hash": file_hash,
+            "chain_hash": chain_hash
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error issuing certificate: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Certificate issuance failed: {str(e)}")
+    finally:
+        db.close()
 
 @app.get("/institute/dashboard")
 async def institute_dashboard(institute = Depends(require_institute)):
@@ -308,8 +340,11 @@ async def institute_dashboard(institute = Depends(require_institute)):
     db = get_db_session()
     try:
         students = db.query(Student).filter(Student.institute_id == institute["user_id"]).count()
-        certificates = sum(1 for c in certificates_db.values() if c["institute_id"] == institute["user_id"])
-        verifications = sum(1 for v in verifications_db.values() if any(c["institute_id"] == institute["user_id"] for c in certificates_db.values() if c["id"] == v.get("certificate_id")))
+        certificates = db.query(Certificate).filter(Certificate.institute_id == institute["user_id"]).count()
+        
+        # Count verifications for this institute's certificates
+        institute_cert_ids = [c.id for c in db.query(Certificate).filter(Certificate.institute_id == institute["user_id"]).all()]
+        verifications = db.query(Verification).filter(Verification.certificate_id.in_(institute_cert_ids)).count() if institute_cert_ids else 0
         
         result = {
             "total_students": students,
