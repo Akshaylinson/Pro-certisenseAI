@@ -16,17 +16,36 @@ const InstituteDashboard = () => {
   const [editingStudent, setEditingStudent] = useState(null);
 
   const apiCall = async (endpoint, method = 'GET', body = null) => {
-    const options = {
-      method,
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        ...(body && { 'Content-Type': 'application/json' })
-      },
-      ...(body && { body: JSON.stringify(body) })
-    };
+    try {
+      const options = {
+        method,
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          ...(body && { 'Content-Type': 'application/json' })
+        },
+        ...(body && { body: JSON.stringify(body) })
+      };
 
-    const response = await fetch(`http://localhost:8000${endpoint}`, options);
-    return response.json();
+      console.log(`Making API call to: ${endpoint}`);
+      console.log(`Headers:`, options.headers);
+      
+      const response = await fetch(`http://localhost:8000${endpoint}`, options);
+      
+      console.log(`Response status: ${response.status}`);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`API Error: ${response.status} - ${errorText}`);
+        throw new Error(`API Error: ${response.status} - ${errorText}`);
+      }
+      
+      const data = await response.json();
+      console.log(`Response data:`, data);
+      return data;
+    } catch (error) {
+      console.error(`API call failed for ${endpoint}:`, error);
+      throw error;
+    }
   };
 
   useEffect(() => {
@@ -37,20 +56,26 @@ const InstituteDashboard = () => {
 
   const loadDashboard = async () => {
     try {
+      console.log('Loading dashboard...');
       const data = await apiCall('/institute/dashboard');
       setDashboard(data);
+      console.log('Dashboard loaded successfully:', data);
     } catch (error) {
       console.error('Error loading dashboard:', error);
+      alert(`Failed to load dashboard: ${error.message}`);
     }
   };
 
   const loadStudents = async () => {
     setLoading(true);
     try {
+      console.log('Loading students...');
       const data = await apiCall('/institute/students');
       setStudents(data.students || []);
+      console.log('Students loaded successfully:', data.students?.length || 0);
     } catch (error) {
       console.error('Error loading students:', error);
+      alert(`Failed to load students: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -58,10 +83,13 @@ const InstituteDashboard = () => {
 
   const loadProfile = async () => {
     try {
+      console.log('Loading profile...');
       const data = await apiCall('/institute/profile');
       setProfile(data);
+      console.log('Profile loaded successfully:', data);
     } catch (error) {
       console.error('Error loading profile:', error);
+      alert(`Failed to load profile: ${error.message}`);
     }
   };
 

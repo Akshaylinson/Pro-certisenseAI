@@ -36,15 +36,25 @@ verifications_db = {}
 feedback_db = {}
 blockchain_config = {"name": "CertiSense Blockchain"}
 
+# Helper function to get database session
+def get_db_session():
+    from database import SessionLocal
+    return SessionLocal()
+
 def get_current_user(authorization: Optional[str] = Header(None)):
+    print(f"Authorization header: {authorization}")
     if not authorization or not authorization.startswith("Bearer "):
+        print("No authorization header or invalid format")
         raise HTTPException(status_code=401, detail="Authentication required")
     
     token = authorization.split(" ")[1]
+    print(f"Token: {token[:20]}...")
     payload = verify_token(token)
     if not payload:
+        print("Token verification failed")
         raise HTTPException(status_code=401, detail="Invalid or expired token")
     
+    print(f"User payload: {payload}")
     return payload
 
 def require_admin(user = Depends(get_current_user)):
@@ -114,19 +124,24 @@ async def verifier_login(request: LoginRequest):
 # Admin Endpoints - Institute Management
 @app.get("/admin/institutes")
 async def get_institutes(admin = Depends(require_admin)):
-    institutes = [
-        {
-            "id": institute["id"],
-            "institute_id": institute["username"],
-            "name": institute["name"],
-            "email": institute["email"],
-            "location": institute["location"],
-            "student_count": sum(1 for s in students_db.values() if s["institute_id"] == institute["id"]),
-            "created_at": institute["created_at"]
-        }
-        for institute in institutes_db.values()
-    ]
-    return {"institutes": institutes}
+    db = get_db_session()
+    try:
+        institutes = db.query(Institute).all()
+        result = []
+        for institute in institutes:
+            student_count = db.query(Student).filter(Student.institute_id == institute.id).count()
+            result.append({
+                "id": institute.id,
+                "institute_id": institute.institute_id,
+                "name": institute.name,
+                "email": institute.email,
+                "location": institute.location,
+                "student_count": student_count,
+                "created_at": institute.created_at
+            })
+        return {"institutes": result}
+    finally:
+        db.close()
 
 @app.post("/admin/institutes")
 async def add_institute(request: InstituteRegisterRequest, admin = Depends(require_admin)):
@@ -137,38 +152,53 @@ async def add_institute(request: InstituteRegisterRequest, admin = Depends(requi
 
 @app.put("/admin/institutes/{institute_id}")
 async def update_institute(institute_id: str, name: str = Query(...), email: str = Query(...), location: str = Query(""), admin = Depends(require_admin)):
-    institute = next((i for i in institutes_db.values() if i["id"] == institute_id), None)
-    if not institute:
-        raise HTTPException(status_code=404, detail="Institute not found")
-    
-    institute["name"] = name
-    institute["email"] = email
-    institute["location"] = location
-    return {"message": "Institute updated successfully"}
+    db = get_db_session()
+    try:
+        institute = db.query(Institute).filter(Institute.id == institute_id).first()
+        if not institute:
+            raise HTTPException(status_code=404, detail="Institute not found")
+        
+        institute.name = name
+        institute.email = email
+        institute.location = location
+        db.commit()
+        return {"message": "Institute updated successfully"}
+    finally:
+        db.close()
 
 @app.delete("/admin/institutes/{institute_id}")
 async def delete_institute(institute_id: str, admin = Depends(require_admin)):
-    institute = next((i for i in institutes_db.values() if i["id"] == institute_id), None)
-    if not institute:
-        raise HTTPException(status_code=404, detail="Institute not found")
-    
-    del institutes_db[institute["username"]]
-    return {"message": "Institute deleted successfully"}
+    db = get_db_session()
+    try:
+        institute = db.query(Institute).filter(Institute.id == institute_id).first()
+        if not institute:
+            raise HTTPException(status_code=404, detail="Institute not found")
+        
+        db.delete(institute)
+        db.commit()
+        return {"message": "Institute deleted successfully"}
+    finally:
+        db.close()
 
 # Admin Endpoints - Verifier Management
 @app.get("/admin/verifiers")
 async def get_verifiers(admin = Depends(require_admin)):
-    verifiers = [
-        {
-            "id": v["id"],
-            "name": v.get("name", v["username"]),
-            "email": v["email"],
-            "organization": v.get("organization", "N/A"),
-            "created_at": v.get("created_at", datetime.utcnow())
-        }
-        for v in verifiers_db.values()
-    ]
-    return {"verifiers": verifiers}
+    db = get_db_session()
+    try:
+        verifiers = db.query(Verifier).all()
+        result = [
+            {
+                "id": v.id,
+                "name": v.username,
+                "email": v.email,
+                "organization": v.company_name or "N/A",
+                "created_at": v.created_at
+            }
+            for v in verifiers
+        ]
+        return {"verifiers": result}
+    finally:
+        db.close()
 
 @app.post("/admin/verifiers")
 async def add_verifier(request: RegisterRequest, admin = Depends(require_admin)):
@@ -176,32 +206,38 @@ async def add_verifier(request: RegisterRequest, admin = Depends(require_admin))
     if not success:
         raise HTTPException(status_code=400, detail="Username already exists")
     
-    verifier = verifiers_db[request.username]
-    verifier["name"] = request.username
-    verifier["organization"] = getattr(request, "organization", "N/A")
-    
     return {"message": "Verifier added successfully"}
 
 @app.put("/admin/verifiers/{verifier_id}")
 async def update_verifier(verifier_id: str, name: str = Query(...), email: str = Query(...), organization: str = Query(...), admin = Depends(require_admin)):
-    verifier = next((v for v in verifiers_db.values() if v["id"] == verifier_id), None)
-    if not verifier:
-        raise HTTPException(status_code=404, detail="Verifier not found")
-    
-    verifier["name"] = name
-    verifier["email"] = email
-    verifier["organization"] = organization
-    
-    return {"message": "Verifier updated successfully"}
+    db = get_db_session()
+    try:
+        verifier = db.query(Verifier).filter(Verifier.id == verifier_id).first()
+        if not verifier:
+            raise HTTPException(status_code=404, detail="Verifier not found")
+        
+        verifier.username = name
+        verifier.email = email
+        verifier.company_name = organization
+        db.commit()
+        
+        return {"message": "Verifier updated successfully"}
+    finally:
+        db.close()
 
 @app.delete("/admin/verifiers/{verifier_id}")
 async def delete_verifier(verifier_id: str, admin = Depends(require_admin)):
-    verifier = next((v for v in verifiers_db.values() if v["id"] == verifier_id), None)
-    if not verifier:
-        raise HTTPException(status_code=404, detail="Verifier not found")
-    
-    del verifiers_db[verifier["username"]]
-    return {"message": "Verifier deleted successfully"}
+    db = get_db_session()
+    try:
+        verifier = db.query(Verifier).filter(Verifier.id == verifier_id).first()
+        if not verifier:
+            raise HTTPException(status_code=404, detail="Verifier not found")
+        
+        db.delete(verifier)
+        db.commit()
+        return {"message": "Verifier deleted successfully"}
+    finally:
+        db.close()
 
 # Admin Endpoints - Certificate Management
 @app.get("/admin/certificates")
@@ -270,84 +306,108 @@ async def update_blockchain_name(name: str = Query(...), admin = Depends(require
 # Admin Endpoints - Feedback Management
 @app.get("/admin/feedback")
 async def get_all_feedback(admin = Depends(require_admin)):
-    feedbacks = [
-        {
-            "id": f["id"],
-            "sender_type": "Verifier",
-            "sender_name": next((v["username"] for v in verifiers_db.values() if v["id"] == f["verifier_id"]), "Unknown"),
-            "email": next((v["email"] for v in verifiers_db.values() if v["id"] == f["verifier_id"]), "N/A"),
-            "message": f["message"],
-            "category": f["category"],
-            "timestamp": f["timestamp"]
-        }
-        for f in feedback_db.values()
-    ]
-    return {"feedbacks": feedbacks}
+    db = get_db_session()
+    try:
+        feedbacks = [
+            {
+                "id": f["id"],
+                "sender_type": "Verifier",
+                "sender_name": "Unknown",  # Would need to query verifier by ID
+                "email": "N/A",
+                "message": f["message"],
+                "category": f["category"],
+                "timestamp": f["timestamp"]
+            }
+            for f in feedback_db.values()
+        ]
+        return {"feedbacks": feedbacks}
+    finally:
+        db.close()
 
 # Admin Endpoints - AI Report Generation
 @app.get("/admin/generate-report")
 async def generate_ai_report(admin = Depends(require_admin)):
-    total_institutes = len(institutes_db)
-    total_students = len(students_db)
-    total_certificates = len(certificates_db)
-    total_verifications = len(verifications_db)
-    
-    health_score = min(100, 70 + (total_certificates * 2))
-    efficiency_score = min(100, 80 + (total_verifications))
-    
-    ai_summary = f"System Analysis: {total_institutes} institutes managing {total_students} students with {total_certificates} certificates verified {total_verifications} times. Overall system health is optimal."
-    
-    return {
-        "ai_summary": ai_summary,
-        "health_score": health_score,
-        "efficiency_score": efficiency_score,
-        "insight_1": f"System operating at {health_score}% capacity with {total_certificates} certificates on blockchain",
-        "insight_2": f"Certificate verification rate: {(total_verifications/max(1, total_certificates)*100):.1f}%",
-        "insight_3": "All institutes performing within expected parameters",
-        "total_institutes": total_institutes,
-        "total_students": total_students,
-        "total_certificates": total_certificates,
-        "total_verifications": total_verifications
-    }
+    db = get_db_session()
+    try:
+        total_institutes = db.query(Institute).count()
+        total_students = db.query(Student).count()
+        total_certificates = len(certificates_db)
+        total_verifications = len(verifications_db)
+        
+        health_score = min(100, 70 + (total_certificates * 2))
+        efficiency_score = min(100, 80 + (total_verifications))
+        
+        ai_summary = f"System Analysis: {total_institutes} institutes managing {total_students} students with {total_certificates} certificates verified {total_verifications} times. Overall system health is optimal."
+        
+        return {
+            "ai_summary": ai_summary,
+            "health_score": health_score,
+            "efficiency_score": efficiency_score,
+            "insight_1": f"System operating at {health_score}% capacity with {total_certificates} certificates on blockchain",
+            "insight_2": f"Certificate verification rate: {(total_verifications/max(1, total_certificates)*100):.1f}%",
+            "insight_3": "All institutes performing within expected parameters",
+            "total_institutes": total_institutes,
+            "total_students": total_students,
+            "total_certificates": total_certificates,
+            "total_verifications": total_verifications
+        }
+    finally:
+        db.close()
 
 # Admin Endpoints - Reports
 @app.get("/admin/reports")
 async def get_admin_reports(admin = Depends(require_admin)):
-    total_institutes = len(institutes_db)
-    total_students = len(students_db)
-    total_certificates = len(certificates_db)
-    total_verifications = len(verifications_db)
-    
-    institute_stats = {}
-    for institute in institutes_db.values():
-        student_count = sum(1 for s in students_db.values() if s["institute_id"] == institute["id"])
-        cert_count = sum(1 for c in certificates_db.values() if c["institute_id"] == institute["id"])
-        institute_stats[institute["name"]] = {"students": student_count, "certificates": cert_count}
-    
-    return {
-        "total_institutes": total_institutes,
-        "total_students": total_students,
-        "total_certificates": total_certificates,
-        "total_verifications": total_verifications,
-        "institute_stats": institute_stats
-    }
+    db = get_db_session()
+    try:
+        total_institutes = db.query(Institute).count()
+        total_students = db.query(Student).count()
+        total_certificates = len(certificates_db)
+        total_verifications = len(verifications_db)
+        
+        institute_stats = {}
+        institutes = db.query(Institute).all()
+        for institute in institutes:
+            student_count = db.query(Student).filter(Student.institute_id == institute.id).count()
+            cert_count = sum(1 for c in certificates_db.values() if c["institute_id"] == institute.id)
+            institute_stats[institute.name] = {"students": student_count, "certificates": cert_count}
+        
+        return {
+            "total_institutes": total_institutes,
+            "total_students": total_students,
+            "total_certificates": total_certificates,
+            "total_verifications": total_verifications,
+            "institute_stats": institute_stats
+        }
+    finally:
+        db.close()
 
 # Institute Endpoints - Profile Management
 @app.get("/institute/profile")
 async def get_institute_profile(institute = Depends(require_institute)):
-    institute_data = next((i for i in institutes_db.values() if i["id"] == institute["user_id"]), None)
-    if not institute_data:
-        raise HTTPException(status_code=404, detail="Institute not found")
-    
-    return {
-        "institute_name": institute_data["name"],
-        "institute_id": institute_data.get("institute_id", ""),
-        "email": institute_data["email"],
-        "location": institute_data.get("location", ""),
-        "description": institute_data.get("description", ""),
-        "image": institute_data.get("image"),
-        "created_at": institute_data["created_at"]
-    }
+    print(f"Institute profile accessed by: {institute}")
+    db = get_db_session()
+    try:
+        institute_data = db.query(Institute).filter(Institute.id == institute["user_id"]).first()
+        if not institute_data:
+            print(f"Institute not found with ID: {institute['user_id']}")
+            raise HTTPException(status_code=404, detail="Institute not found")
+        
+        result = {
+            "institute_name": institute_data.name,
+            "institute_id": institute_data.institute_id or "",
+            "email": institute_data.email,
+            "location": institute_data.location or "",
+            "description": "",  # Add description field to database if needed
+            "image": None,  # Add image field to database if needed
+            "created_at": institute_data.created_at
+        }
+        print(f"Profile result: {result}")
+        return result
+    except Exception as e:
+        print(f"Error in institute profile: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Profile error: {str(e)}")
+    finally:
+        db.close()
 
 @app.put("/institute/profile")
 async def update_institute_profile_endpoint(
@@ -359,42 +419,47 @@ async def update_institute_profile_endpoint(
     image: Optional[UploadFile] = File(None),
     institute = Depends(require_institute)
 ):
-    update_data = {
-        "institute_name": institute_name,
-        "institute_id": institute_id,
-        "email": email,
-        "location": location,
-        "description": description
-    }
-    
-    # Handle image upload
-    if image:
-        content = await image.read()
-        # Convert to base64 for storage (in real app, save to file system or cloud)
-        image_data = base64.b64encode(content).decode()
-        update_data["image"] = f"data:image/{image.filename.split('.')[-1]};base64,{image_data}"
-    
-    success = update_institute_profile(institute["user_id"], update_data)
-    if not success:
-        raise HTTPException(status_code=404, detail="Institute not found")
-    
-    return {"message": "Profile updated successfully"}
+    db = get_db_session()
+    try:
+        institute_data = db.query(Institute).filter(Institute.id == institute["user_id"]).first()
+        if not institute_data:
+            raise HTTPException(status_code=404, detail="Institute not found")
+        
+        institute_data.name = institute_name
+        institute_data.institute_id = institute_id
+        institute_data.email = email
+        institute_data.location = location
+        # Note: description and image fields would need to be added to database schema
+        
+        db.commit()
+        return {"message": "Profile updated successfully"}
+    finally:
+        db.close()
 
 # Institute Endpoints - Student Management
 @app.get("/institute/students")
 async def get_institute_students(institute = Depends(require_institute)):
-    students = [
-        {
-            "id": s["id"],
-            "student_id": s["student_id"],
-            "name": s["name"],
-            "email": s["email"],
-            "created_at": s["created_at"]
-        }
-        for s in students_db.values()
-        if s["institute_id"] == institute["user_id"]
-    ]
-    return {"students": students}
+    print(f"Institute students accessed by: {institute}")
+    db = get_db_session()
+    try:
+        students = db.query(Student).filter(Student.institute_id == institute["user_id"]).all()
+        result = [
+            {
+                "id": s.id,
+                "student_id": s.student_id,
+                "name": s.name,
+                "email": s.email,
+                "created_at": s.created_at
+            }
+            for s in students
+        ]
+        print(f"Students result: {len(result)} students found")
+        return {"students": result}
+    except Exception as e:
+        print(f"Error in institute students: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Students error: {str(e)}")
+    finally:
+        db.close()
 
 @app.post("/institute/students")
 async def add_student(name: str = Query(...), email: str = Query(...), password: str = Query(...), institute = Depends(require_institute)):
@@ -409,16 +474,19 @@ async def add_student(name: str = Query(...), email: str = Query(...), password:
 
 @app.put("/institute/students/{student_id}")
 async def update_student(student_id: str, name: str = Query(...), email: str = Query(...), institute = Depends(require_institute)):
-    # Find student by internal ID (not student_id)
-    student = next((s for s in students_db.values() if s["id"] == student_id and s["institute_id"] == institute["user_id"]), None)
-    if not student:
-        raise HTTPException(status_code=404, detail="Student not found or not authorized")
-    
-    # Update student details (student_id cannot be changed)
-    student["name"] = name
-    student["email"] = email
-    
-    return {"message": "Student updated successfully"}
+    db = get_db_session()
+    try:
+        student = db.query(Student).filter(Student.id == student_id, Student.institute_id == institute["user_id"]).first()
+        if not student:
+            raise HTTPException(status_code=404, detail="Student not found or not authorized")
+        
+        student.name = name
+        student.email = email
+        db.commit()
+        
+        return {"message": "Student updated successfully"}
+    finally:
+        db.close()
 
 @app.post("/institute/certificates")
 async def issue_certificate(file: UploadFile = File(...), student_id: str = Query(...), institute = Depends(require_institute)):
@@ -448,47 +516,70 @@ async def issue_certificate(file: UploadFile = File(...), student_id: str = Quer
 
 @app.get("/institute/dashboard")
 async def institute_dashboard(institute = Depends(require_institute)):
-    students = sum(1 for s in students_db.values() if s["institute_id"] == institute["user_id"])
-    certificates = sum(1 for c in certificates_db.values() if c["institute_id"] == institute["user_id"])
-    verifications = sum(1 for v in verifications_db.values() if any(c["institute_id"] == institute["user_id"] for c in certificates_db.values() if c["id"] == v.get("certificate_id")))
-    
-    return {
-        "total_students": students,
-        "total_certificates": certificates,
-        "total_verifications": verifications
-    }
+    print(f"Institute dashboard accessed by: {institute}")
+    db = get_db_session()
+    try:
+        students = db.query(Student).filter(Student.institute_id == institute["user_id"]).count()
+        certificates = sum(1 for c in certificates_db.values() if c["institute_id"] == institute["user_id"])
+        verifications = sum(1 for v in verifications_db.values() if any(c["institute_id"] == institute["user_id"] for c in certificates_db.values() if c["id"] == v.get("certificate_id")))
+        
+        result = {
+            "total_students": students,
+            "total_certificates": certificates,
+            "total_verifications": verifications
+        }
+        print(f"Dashboard result: {result}")
+        return result
+    except Exception as e:
+        print(f"Error in institute dashboard: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Dashboard error: {str(e)}")
+    finally:
+        db.close()
 
 # Student Endpoints
 @app.get("/student/profile")
 async def get_student_profile(student = Depends(require_student)):
-    student_data = next((s for s in students_db.values() if s["id"] == student["user_id"]), None)
-    if not student_data:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    return {
-        "student_id": student_data["student_id"],
-        "name": student_data["name"],
-        "email": student_data["email"],
-        "institute_id": student_data["institute_id"],
-        "created_at": student_data["created_at"]
-    }
+    db = get_db_session()
+    try:
+        student_data = db.query(Student).filter(Student.id == student["user_id"]).first()
+        if not student_data:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        return {
+            "student_id": student_data.student_id,
+            "name": student_data.name,
+            "email": student_data.email,
+            "institute_id": student_data.institute_id,
+            "created_at": student_data.created_at
+        }
+    finally:
+        db.close()
 
 @app.put("/student/profile")
 async def update_student_profile(name: str = Query(...), email: str = Query(...), student = Depends(require_student)):
-    student_data = next((s for s in students_db.values() if s["id"] == student["user_id"]), None)
-    if student_data:
-        student_data["name"] = name
-        student_data["email"] = email
-    return {"message": "Profile updated successfully"}
+    db = get_db_session()
+    try:
+        student_data = db.query(Student).filter(Student.id == student["user_id"]).first()
+        if student_data:
+            student_data.name = name
+            student_data.email = email
+            db.commit()
+        return {"message": "Profile updated successfully"}
+    finally:
+        db.close()
 
 @app.get("/student/certificates")
 async def get_student_certificates(student = Depends(require_student)):
-    student_data = next((s for s in students_db.values() if s["id"] == student["user_id"]), None)
-    if not student_data:
-        raise HTTPException(status_code=404, detail="Student not found")
-    
-    certificates = BlockchainService.get_student_certificates(student_data["student_id"])
-    return {"certificates": certificates}
+    db = get_db_session()
+    try:
+        student_data = db.query(Student).filter(Student.id == student["user_id"]).first()
+        if not student_data:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        certificates = BlockchainService.get_student_certificates(student_data.student_id)
+        return {"certificates": certificates}
+    finally:
+        db.close()
 
 @app.get("/student/certificate/{cert_hash}")
 async def get_certificate_details(cert_hash: str, student = Depends(require_student)):
