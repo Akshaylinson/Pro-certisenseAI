@@ -130,14 +130,17 @@ const VerifierDashboard = () => {
     setChatInput('');
 
     try {
-      const res = await axios.post(
-        `${API_URL}/api/verifier/ai-query?query=${encodeURIComponent(chatInput)}`,
-        {},
-        { headers }
+      const res = await axios.get(
+        `${API_URL}/verifier/ai-query`,
+        { 
+          params: { query: chatInput },
+          headers 
+        }
       );
       const botMessage = { role: 'bot', content: res.data.response };
       setChatMessages([...chatMessages, userMessage, botMessage]);
     } catch (err) {
+      console.error('Chat error:', err);
       const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error. Please try again.' };
       setChatMessages([...chatMessages, userMessage, errorMessage]);
     }

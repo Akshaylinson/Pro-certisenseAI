@@ -7,28 +7,51 @@ class VerifierChatbot:
     @staticmethod
     def get_verifier_data(verifier_id: str, db: Session) -> Dict:
         """Fetch verifier-specific data from database"""
-        verifications = db.query(Verification).filter(
-            Verification.verifier_id == verifier_id
-        ).all()
-        
-        valid_count = sum(1 for v in verifications if v.status.value == 'valid')
-        invalid_count = sum(1 for v in verifications if v.status.value == 'invalid')
-        flagged_count = sum(1 for v in verifications if v.status.value == 'flagged')
-        
-        recent_verifications = [v for v in verifications 
-                               if (datetime.utcnow() - v.timestamp).days <= 7]
-        
-        certificate_hashes = [v.certificate_hash for v in verifications]
-        
-        return {
-            'total_verifications': len(verifications),
-            'valid_certificates': valid_count,
-            'invalid_certificates': invalid_count,
-            'flagged_certificates': flagged_count,
-            'recent_verifications': len(recent_verifications),
-            'certificate_hashes': certificate_hashes[:10],
-            'success_rate': (valid_count / len(verifications) * 100) if verifications else 0
-        }
+        try:
+            verifications = db.query(Verification).filter(
+                Verification.verifier_id == verifier_id
+            ).all()
+            
+            if not verifications:
+                return {
+                    'total_verifications': 0,
+                    'valid_certificates': 0,
+                    'invalid_certificates': 0,
+                    'flagged_certificates': 0,
+                    'recent_verifications': 0,
+                    'certificate_hashes': [],
+                    'success_rate': 0
+                }
+            
+            valid_count = sum(1 for v in verifications if v.result == True)
+            invalid_count = sum(1 for v in verifications if v.result == False)
+            flagged_count = sum(1 for v in verifications if hasattr(v, 'is_suspicious') and v.is_suspicious)
+            
+            recent_verifications = [v for v in verifications 
+                                   if (datetime.utcnow() - v.timestamp).days <= 7]
+            
+            certificate_hashes = [v.certificate_hash for v in verifications if v.certificate_hash]
+            
+            return {
+                'total_verifications': len(verifications),
+                'valid_certificates': valid_count,
+                'invalid_certificates': invalid_count,
+                'flagged_certificates': flagged_count,
+                'recent_verifications': len(recent_verifications),
+                'certificate_hashes': certificate_hashes[:10],
+                'success_rate': (valid_count / len(verifications) * 100) if verifications else 0
+            }
+        except Exception as e:
+            print(f"Error fetching verifier data: {str(e)}")
+            return {
+                'total_verifications': 0,
+                'valid_certificates': 0,
+                'invalid_certificates': 0,
+                'flagged_certificates': 0,
+                'recent_verifications': 0,
+                'certificate_hashes': [],
+                'success_rate': 0
+            }
     
     @staticmethod
     def process_query(query: str, verifier_id: str, db: Session) -> str:
@@ -112,4 +135,4 @@ Ask me about:
 • "How many valid certificates?"
 • "Recent activity"
 • "Certificate hashes"
-• "How to verify?""""
+• "How to verify?"""

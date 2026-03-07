@@ -786,17 +786,22 @@ async def institute_ai_query(request: dict, institute = Depends(require_institut
     response = ai_service.process_institute_query(query, db, institute["user_id"], session_id)
     return {"response": response}
 
-@app.post("/verifier/ai-query")
-async def verifier_ai_query(request: dict, verifier = Depends(require_verifier), db: Session = Depends(get_db)):
-    """AI assistant for verifier dashboard"""
-    query = request.get('query', '')
-    session_id = request.get('session_id', 'default')
+@app.get("/verifier/ai-query")
+async def verifier_ai_query(query: str = Query(...), verifier = Depends(require_verifier), db: Session = Depends(get_db)):
+    """AI assistant for verifier dashboard with database context"""
+    from verifier_chatbot import VerifierChatbot
     
     if not query:
         return {"response": "Please ask me a question about certificate verification."}
     
-    response = ai_service.process_verifier_query(query, db, verifier["user_id"], session_id)
-    return {"response": response}
+    try:
+        response = VerifierChatbot.process_query(query, verifier["user_id"], db)
+        return {"response": response, "timestamp": datetime.utcnow().isoformat()}
+    except Exception as e:
+        print(f"Verifier AI Query Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"response": "Sorry, I encountered an error. Please try again.", "error": str(e)}
 
 # Chatbot Endpoint
 @app.post("/chatbot")
