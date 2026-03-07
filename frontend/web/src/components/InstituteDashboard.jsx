@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import AIAssistantWidget from './AIAssistantWidget';
 
 const InstituteDashboard = () => {
   const { user, token, logout } = useAuth();
@@ -580,6 +581,12 @@ const InstituteDashboard = () => {
           </div>
         </div>
       </div>
+      
+      {/* AI Assistant Widget */}
+      <AIAssistantWidget 
+        role="Institute" 
+        apiEndpoint="/institute/ai-query" 
+      />
     </div>
   );
 };

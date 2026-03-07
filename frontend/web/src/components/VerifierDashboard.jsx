@@ -9,7 +9,9 @@ const VerifierDashboard = () => {
   const [verificationResult, setVerificationResult] = useState(null);
   const [history, setHistory] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
-  const [chatMessages, setChatMessages] = useState([]);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'bot', content: 'Hello! I\'m your verification assistant. I can help you with:\n• Your verification statistics\n• Verification history\n• Certificate verification process\n• System information\n\nWhat would you like to know?' }
+  ]);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -125,17 +127,20 @@ const VerifierDashboard = () => {
 
     const userMessage = { role: 'user', content: chatInput };
     setChatMessages([...chatMessages, userMessage]);
+    setChatInput('');
 
     try {
-      const res = await axios.post(`${API_URL}/verifier/chatbot?message=${encodeURIComponent(chatInput)}`, {}, { headers });
+      const res = await axios.post(
+        `${API_URL}/api/verifier/ai-query?query=${encodeURIComponent(chatInput)}`,
+        {},
+        { headers }
+      );
       const botMessage = { role: 'bot', content: res.data.response };
       setChatMessages([...chatMessages, userMessage, botMessage]);
     } catch (err) {
-      const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error.' };
+      const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error. Please try again.' };
       setChatMessages([...chatMessages, userMessage, errorMessage]);
     }
-
-    setChatInput('');
   };
 
   const handleLogout = () => {
@@ -434,18 +439,21 @@ const VerifierDashboard = () => {
               </div>
             )}
 
-            {/* MODULE 5: Chatbot */}
+            {/* MODULE 5: Verification Assistant Chatbot */}
             {activeModule === 'chatbot' && (
               <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verification Assistant</h2>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">🤖 Verification Assistant</h2>
+                <p className="text-gray-600 mb-4">Ask me about your verification statistics, certificates, and activity.</p>
                 
-                <div className="bg-gray-50 rounded-lg p-4 h-96 overflow-y-auto mb-4">
+                <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto mb-4 border border-gray-200">
                   {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`mb-3 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                      <div className={`inline-block px-4 py-2 rounded-lg ${
-                        msg.role === 'user' ? 'bg-green-500 text-white' : 'bg-gray-200 text-gray-800'
+                    <div key={idx} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      <div className={`inline-block max-w-[80%] px-4 py-3 rounded-lg shadow-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-green-500 text-white rounded-br-none' 
+                          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
                       }`}>
-                        {msg.content}
+                        <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
                       </div>
                     </div>
                   ))}
@@ -457,15 +465,25 @@ const VerifierDashboard = () => {
                     value={chatInput}
                     onChange={(e) => setChatInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                    className="flex-1 px-4 py-2 border rounded-lg"
-                    placeholder="Ask about certificate verification..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                    placeholder="Ask: 'Show my statistics' or 'How many valid certificates?'"
                   />
                   <button
                     onClick={sendChatMessage}
-                    className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700"
+                    className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-semibold transition"
                   >
                     Send
                   </button>
+                </div>
+                
+                <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-sm text-blue-800 font-semibold mb-2">💡 Try asking:</p>
+                  <div className="grid grid-cols-2 gap-2 text-sm">
+                    <button onClick={() => setChatInput('Show my statistics')} className="text-left text-blue-600 hover:underline">• Show my statistics</button>
+                    <button onClick={() => setChatInput('How many valid certificates?')} className="text-left text-blue-600 hover:underline">• How many valid certificates?</button>
+                    <button onClick={() => setChatInput('Recent activity')} className="text-left text-blue-600 hover:underline">• Recent activity</button>
+                    <button onClick={() => setChatInput('Show certificate hashes')} className="text-left text-blue-600 hover:underline">• Show certificate hashes</button>
+                  </div>
                 </div>
               </div>
             )}

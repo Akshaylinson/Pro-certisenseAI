@@ -17,6 +17,7 @@ from blockchain_service import BlockchainService, generate_file_hash
 from ai_service import AIValidationService
 from chatbot_service import ChatbotService
 from admin_api import router as admin_router
+from ai_query_service import AIQueryService
 
 # Create all database tables
 Base.metadata.create_all(bind=engine)
@@ -757,6 +758,45 @@ async def submit_feedback(
         return {"message": "Feedback submitted successfully", "feedback_id": feedback_id}
     finally:
         db.close()
+
+# AI Query Endpoints
+ai_service = AIQueryService()
+
+@app.post("/admin/ai-query")
+async def admin_ai_query(request: dict, admin = Depends(require_admin), db: Session = Depends(get_db)):
+    """AI assistant for admin dashboard"""
+    query = request.get('query', '')
+    session_id = request.get('session_id', 'default')
+    
+    if not query:
+        return {"response": "Please ask me a question about the system."}
+    
+    response = ai_service.process_admin_query(query, db, session_id)
+    return {"response": response}
+
+@app.post("/institute/ai-query")
+async def institute_ai_query(request: dict, institute = Depends(require_institute), db: Session = Depends(get_db)):
+    """AI assistant for institute dashboard"""
+    query = request.get('query', '')
+    session_id = request.get('session_id', 'default')
+    
+    if not query:
+        return {"response": "Please ask me a question about your institute."}
+    
+    response = ai_service.process_institute_query(query, db, institute["user_id"], session_id)
+    return {"response": response}
+
+@app.post("/verifier/ai-query")
+async def verifier_ai_query(request: dict, verifier = Depends(require_verifier), db: Session = Depends(get_db)):
+    """AI assistant for verifier dashboard"""
+    query = request.get('query', '')
+    session_id = request.get('session_id', 'default')
+    
+    if not query:
+        return {"response": "Please ask me a question about certificate verification."}
+    
+    response = ai_service.process_verifier_query(query, db, verifier["user_id"], session_id)
+    return {"response": response}
 
 # Chatbot Endpoint
 @app.post("/chatbot")

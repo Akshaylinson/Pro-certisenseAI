@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from verifier_service import VerifierService
 from chatbot_service import ChatbotService
+from verifier_chatbot import VerifierChatbot
 from auth_db import verify_token
 
 router = APIRouter(prefix="/api/verifier", tags=["Verifier"])
@@ -256,42 +257,28 @@ async def get_blockchain_details(
 
 # ==================== MODULE 7: CHATBOT INTERACTION ====================
 
-@router.post("/chatbot")
-async def chatbot_query(
-    message: str = Query(..., description="Chat message"),
-    context: Optional[str] = Query(None, description="Additional context"),
-    verifier = Depends(get_current_verifier)
+@router.post("/ai-query")
+async def ai_query(
+    query: str = Query(..., description="Chat query"),
+    verifier = Depends(get_current_verifier),
+    db: Session = Depends(get_db)
 ):
-    """Interact with verification assistance chatbot"""
+    """AI chatbot with verifier-specific data from database"""
     try:
-        response = ChatbotService.process_query(
-            message=message,
-            user_role="verifier",
-            user_id=verifier["user_id"]
+        response = VerifierChatbot.process_query(
+            query=query,
+            verifier_id=verifier["user_id"],
+            db=db
         )
         
-        # Add verifier-specific context
-        if "verify" in message.lower() or "certificate" in message.lower():
-            from database import SessionLocal, Verification
-            db = SessionLocal()
-            try:
-                verifications = db.query(Verification).filter(
-                    Verification.verifier_id == verifier["user_id"]
-                ).all()
-                
-                response["verifier_stats"] = {
-                    "total_verifications": len(verifications),
-                    "recent_verifications": len([v for v in verifications 
-                                                 if (datetime.utcnow() - v.timestamp).days <= 7])
-                }
-            finally:
-                db.close()
-        
-        return response
+        return {
+            "response": response,
+            "timestamp": datetime.utcnow().isoformat()
+        }
     
     except Exception as e:
         return {
-            "response": "I apologize, but I encountered an error processing your request.",
+            "response": "Sorry, I encountered an error. Please try again.",
             "error": str(e)
         }
 

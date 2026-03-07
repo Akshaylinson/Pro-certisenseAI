@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReportDialog from './ReportDialog';
+import AIAssistantWidget from './AIAssistantWidget';
 
 const API_URL = 'http://localhost:8000';
 
@@ -859,6 +860,12 @@ const AdminDashboard = () => {
         reportData={reportData}
         reportType={reportType}
         loading={reportLoading}
+      />
+      
+      {/* AI Assistant Widget */}
+      <AIAssistantWidget 
+        role="Admin" 
+        apiEndpoint="/admin/ai-query" 
       />
     </div>
   );
