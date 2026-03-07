@@ -11,11 +11,14 @@ from auth_db import (
     authenticate_admin, authenticate_institute, authenticate_student, authenticate_verifier,
     register_institute, register_student, register_verifier, verify_token
 )
-from database import get_db, Institute, Student, Verifier, Certificate, Verification, Feedback, CertificateStatusEnum
+from database import get_db, Institute, Student, Verifier, Certificate, Verification, Feedback, CertificateStatusEnum, Base, engine
 from blockchain_service import BlockchainService, generate_file_hash
 from ai_service import AIValidationService
 from chatbot_service import ChatbotService
 from admin_api import router as admin_router
+
+# Create all database tables
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="CertiSense AI - Enhanced Blockchain Certificate System", version="3.0.0")
 
@@ -250,7 +253,12 @@ async def get_institute_students(institute = Depends(require_institute)):
         db.close()
 
 @app.post("/institute/students")
-async def add_student(name: str = Query(...), email: str = Query(...), password: str = Query(...), institute = Depends(require_institute)):
+async def add_student(
+    name: str = Form(...),
+    email: str = Form(...),
+    password: str = Form(...),
+    institute = Depends(require_institute)
+):
     try:
         success, student_id = register_student(name, email, password, institute["user_id"])
         if not success:
@@ -468,102 +476,144 @@ async def get_certificate_details(cert_hash: str, student = Depends(require_stud
 
 # Verifier Endpoints
 @app.get("/verifier/dashboard")
-async def verifier_dashboard(verifier = Depends(require_verifier)):
+async def verifier_dashboard(verifier = Depends(require_verifier), db: Session = Depends(get_db)):
     """Get verifier dashboard statistics"""
     print(f"Verifier dashboard accessed by: {verifier}")
     
-    # Get verifications from in-memory storage
-    verifier_verifications = [v for v in verifications_db.values() if v["verifier_id"] == verifier["user_id"]]
-    
-    total_verifications = len(verifier_verifications)
-    valid_certificates = sum(1 for v in verifier_verifications if v["result"])
-    invalid_certificates = sum(1 for v in verifier_verifications if not v["result"])
-    
-    success_rate = (valid_certificates / total_verifications * 100) if total_verifications > 0 else 0
-    
-    return {
-        "statistics": {
-            "total_verifications": total_verifications,
-            "valid_certificates": valid_certificates,
-            "invalid_certificates": invalid_certificates,
-            "tampered_certificates": 0
-        },
-        "success_rate": success_rate
-    }
+    try:
+        # Get verifications from database
+        verifications = db.query(Verification).filter(Verification.verifier_id == verifier["user_id"]).all()
+        
+        total_verifications = len(verifications)
+        valid_certificates = sum(1 for v in verifications if v.result)
+        invalid_certificates = sum(1 for v in verifications if not v.result)
+        tampered_certificates = sum(1 for v in verifications if v.status == "tampered")
+        
+        success_rate = (valid_certificates / total_verifications * 100) if total_verifications > 0 else 0
+        
+        return {
+            "statistics": {
+                "total_verifications": total_verifications,
+                "valid_certificates": valid_certificates,
+                "invalid_certificates": invalid_certificates,
+                "tampered_certificates": tampered_certificates
+            },
+            "success_rate": success_rate
+        }
+    except Exception as e:
+        print(f"Error in verifier dashboard: {str(e)}")
+        # Return default values if error
+        return {
+            "statistics": {
+                "total_verifications": 0,
+                "valid_certificates": 0,
+                "invalid_certificates": 0,
+                "tampered_certificates": 0
+            },
+            "success_rate": 0
+        }
+    finally:
+        db.close()
 
 @app.get("/verifier/history")
-async def verifier_history(verifier = Depends(require_verifier)):
+async def verifier_history(verifier = Depends(require_verifier), db: Session = Depends(get_db)):
     """Get verifier verification history"""
-    verifier_verifications = [
-        {
-            "verification_id": v["id"],
-            "certificate_hash": v["certificate_hash"],
-            "verification_result": "valid" if v["result"] else "invalid",
-            "confidence_score": v["ai_validation"].get("confidence", 0.0),
-            "timestamp": v["timestamp"]
-        }
-        for v in verifications_db.values() 
-        if v["verifier_id"] == verifier["user_id"]
-    ]
-    
-    return {"history": verifier_verifications}
+    try:
+        verifications = db.query(Verification).filter(Verification.verifier_id == verifier["user_id"]).order_by(Verification.timestamp.desc()).all()
+        
+        verifier_verifications = [
+            {
+                "verification_id": v.id,
+                "certificate_hash": v.certificate_hash,
+                "verification_result": "valid" if v.result else "invalid",
+                "confidence_score": v.confidence_score or 0.0,
+                "timestamp": v.timestamp.isoformat()
+            }
+            for v in verifications
+        ]
+        
+        return {"history": verifier_verifications}
+    except Exception as e:
+        print(f"Error in verifier history: {str(e)}")
+        return {"history": []}
+    finally:
+        db.close()
 
 @app.get("/verifier/feedback")
-async def get_verifier_feedback(verifier = Depends(require_verifier)):
+async def get_verifier_feedback(verifier = Depends(require_verifier), db: Session = Depends(get_db)):
     """Get verifier's submitted feedback"""
-    verifier_feedbacks = [
-        {
-            "id": f["id"],
-            "feedback_type": f["category"],
-            "message": f["message"],
-            "priority": "medium",
-            "timestamp": f["timestamp"],
-            "flagged": False
-        }
-        for f in feedback_db.values()
-        if f["verifier_id"] == verifier["user_id"]
-    ]
-    
-    return {"feedbacks": verifier_feedbacks}
+    try:
+        feedbacks = db.query(Feedback).filter(Feedback.verifier_id == verifier["user_id"]).order_by(Feedback.timestamp.desc()).all()
+        
+        verifier_feedbacks = [
+            {
+                "id": f.id,
+                "feedback_type": f.category,
+                "message": f.message,
+                "priority": f.priority,
+                "timestamp": f.timestamp.isoformat(),
+                "flagged": f.flagged
+            }
+            for f in feedbacks
+        ]
+        
+        return {"feedbacks": verifier_feedbacks}
+    except Exception as e:
+        print(f"Error in verifier feedback: {str(e)}")
+        return {"feedbacks": []}
+    finally:
+        db.close()
 
 @app.post("/verifier/verify")
 async def verify_certificate(file: UploadFile = File(...), verifier = Depends(require_verifier)):
-    content = await file.read()
-    file_hash = generate_file_hash(content)
-    
-    ai_result = AIValidationService.validate_certificate_content(content, file.filename)
-    blockchain_data = BlockchainService.verify_certificate_hash(file_hash)
-    is_valid = blockchain_data is not None and blockchain_data.get("valid", False)
-    
-    explanation = AIValidationService.explain_verification_result(is_valid, blockchain_data)
-    
-    BlockchainService.add_verification(file_hash, verifier["user_id"], is_valid)
-    
-    verification_id = str(uuid.uuid4())
-    verifications_db[verification_id] = {
-        "id": verification_id,
-        "certificate_hash": file_hash,
-        "verifier_id": verifier["user_id"],
-        "result": is_valid,
-        "ai_validation": ai_result,
-        "blockchain_data": blockchain_data,
-        "explanation": explanation,
-        "timestamp": datetime.utcnow()
-    }
-    
-    return {
-        "verification_id": verification_id,
-        "verification_result": "valid" if is_valid else "invalid",
-        "result": is_valid,
-        "certificate_hash": file_hash,
-        "confidence_score": ai_result.get("confidence", 0.0),
-        "blockchain_verified": is_valid,
-        "processing_time": ai_result.get("processing_time", 0.0),
-        "hash": file_hash,
-        "ai_validation": ai_result,
-        "blockchain_data": blockchain_data,
-        "explanation": explanation
-    }
+    db = get_db_session()
+    try:
+        content = await file.read()
+        file_hash = generate_file_hash(content)
+        
+        ai_result = AIValidationService.validate_certificate_content(content, file.filename)
+        blockchain_data = BlockchainService.verify_certificate_hash(file_hash)
+        is_valid = blockchain_data is not None and blockchain_data.get("valid", False)
+        
+        explanation = AIValidationService.explain_verification_result(is_valid, blockchain_data)
+        
+        BlockchainService.add_verification(file_hash, verifier["user_id"], is_valid)
+        
+        # Find certificate in database
+        cert = db.query(Certificate).filter(Certificate.hash == file_hash).first()
+        
+        # Save to database
+        from database import VerificationStatusEnum
+        verification_id = str(uuid.uuid4())
+        new_verification = Verification(
+            id=verification_id,
+            certificate_id=cert.id if cert else None,
+            certificate_hash=file_hash,
+            verifier_id=verifier["user_id"],
+            result=is_valid,
+            confidence_score=ai_result.get("confidence", 0.0),
+            status=VerificationStatusEnum.VERIFIED if is_valid else VerificationStatusEnum.FAILED,
+            blockchain_integrity=is_valid,
+            timestamp=datetime.utcnow()
+        )
+        db.add(new_verification)
+        db.commit()
+        
+        return {
+            "verification_id": verification_id,
+            "verification_result": "valid" if is_valid else "invalid",
+            "result": is_valid,
+            "certificate_hash": file_hash,
+            "confidence_score": ai_result.get("confidence", 0.0),
+            "blockchain_verified": is_valid,
+            "processing_time": ai_result.get("processing_time", 0.0),
+            "hash": file_hash,
+            "ai_validation": ai_result,
+            "blockchain_data": blockchain_data,
+            "explanation": explanation
+        }
+    finally:
+        db.close()
 
 @app.post("/verifier/feedback")
 async def submit_feedback(
@@ -573,16 +623,24 @@ async def submit_feedback(
     verifier = Depends(require_verifier)
 ):
     """Submit feedback"""
-    feedback_id = str(uuid.uuid4())
-    feedback_db[feedback_id] = {
-        "id": feedback_id,
-        "verifier_id": verifier["user_id"],
-        "message": message,
-        "category": feedback_type,
-        "priority": priority,
-        "timestamp": datetime.utcnow()
-    }
-    return {"message": "Feedback submitted successfully", "feedback_id": feedback_id}
+    db = get_db_session()
+    try:
+        feedback_id = str(uuid.uuid4())
+        new_feedback = Feedback(
+            id=feedback_id,
+            verifier_id=verifier["user_id"],
+            message=message,
+            category=feedback_type,
+            priority=priority,
+            status="open",
+            flagged=False,
+            timestamp=datetime.utcnow()
+        )
+        db.add(new_feedback)
+        db.commit()
+        return {"message": "Feedback submitted successfully", "feedback_id": feedback_id}
+    finally:
+        db.close()
 
 # Chatbot Endpoint
 @app.post("/chatbot")

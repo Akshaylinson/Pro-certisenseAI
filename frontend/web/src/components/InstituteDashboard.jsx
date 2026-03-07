@@ -96,11 +96,17 @@ const InstituteDashboard = () => {
   const handleAddStudent = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:8000/institute/students?name=${encodeURIComponent(newStudent.name)}&email=${encodeURIComponent(newStudent.email)}&password=${encodeURIComponent(newStudent.password)}`, {
+      const formData = new FormData();
+      formData.append('name', newStudent.name);
+      formData.append('email', newStudent.email);
+      formData.append('password', newStudent.password);
+
+      const response = await fetch(`http://localhost:8000/institute/students`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
-        }
+        },
+        body: formData
       });
 
       const result = await response.json();
