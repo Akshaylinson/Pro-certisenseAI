@@ -8,6 +8,7 @@ import uuid
 from database import get_db, Institute, Student, Certificate, Verifier, Verification, Feedback
 from blockchain_service import BlockchainService, generate_file_hash
 from ai_service import AIValidationService
+from report_service import ReportService
 
 router = APIRouter(prefix="/admin", tags=["Admin"])
 
@@ -551,64 +552,55 @@ async def get_analytics(admin=Depends(require_admin_role), db: Session = Depends
             }
         }
 
-# ==================== MODULE 7: GENERATE REPORTS ====================
+# ==================== MODULE 7: AI-POWERED REPORTS ====================
 
-@router.get("/reports/institutes")
+@router.get("/reports/institute")
 async def generate_institute_report(admin=Depends(require_admin_role), db: Session = Depends(get_db)):
-    """Generate institute report"""
-    institutes = db.query(Institute).all()
-    report_data = []
-    for inst in institutes:
-        student_count = db.query(Student).filter(Student.institute_id == inst.id).count()
-        cert_count = db.query(Certificate).filter(Certificate.institute_id == inst.id).count()
-        report_data.append({
-            "institute_name": inst.name,
-            "institute_id": inst.institute_id,
-            "students": student_count,
-            "certificates": cert_count,
-            "status": inst.approval_status
-        })
-    
-    log_audit(db, admin["user_id"], "GENERATE", "report", "institutes", "Generated institute report")
-    return {"report_type": "institutes", "data": report_data, "generated_at": datetime.utcnow()}
+    """Generate AI-powered institute report"""
+    try:
+        report_service = ReportService()
+        report = report_service.generate_institute_report(db)
+        log_audit(db, admin["user_id"], "GENERATE", "report", "institute", "Generated AI institute report")
+        return report
+    except Exception as e:
+        print(f"Error generating institute report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate report")
 
 @router.get("/reports/certificates")
 async def generate_certificate_report(admin=Depends(require_admin_role), db: Session = Depends(get_db)):
-    """Generate certificate report"""
-    certificates = db.query(Certificate).all()
-    report_data = []
-    for cert in certificates:
-        student = db.query(Student).filter(Student.id == cert.student_id).first()
-        institute = db.query(Institute).filter(Institute.id == cert.institute_id).first()
-        report_data.append({
-            "certificate_id": cert.id,
-            "student_name": student.name if student else "Unknown",
-            "institute_name": institute.name if institute else "Unknown",
-            "status": cert.status.value,
-            "verifications": cert.verification_count,
-            "issue_date": cert.issue_date
-        })
-    
-    log_audit(db, admin["user_id"], "GENERATE", "report", "certificates", "Generated certificate report")
-    return {"report_type": "certificates", "data": report_data, "generated_at": datetime.utcnow()}
+    """Generate AI-powered certificate report"""
+    try:
+        report_service = ReportService()
+        report = report_service.generate_certificate_report(db)
+        log_audit(db, admin["user_id"], "GENERATE", "report", "certificate", "Generated AI certificate report")
+        return report
+    except Exception as e:
+        print(f"Error generating certificate report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate report")
 
 @router.get("/reports/verifications")
 async def generate_verification_report(admin=Depends(require_admin_role), db: Session = Depends(get_db)):
-    """Generate verification report"""
-    verifications = db.query(Verification).order_by(desc(Verification.timestamp)).limit(500).all()
-    report_data = []
-    for verif in verifications:
-        verifier = db.query(Verifier).filter(Verifier.id == verif.verifier_id).first()
-        report_data.append({
-            "verification_id": verif.id,
-            "verifier": verifier.username if verifier else "Unknown",
-            "result": "Valid" if verif.result else "Invalid",
-            "confidence": verif.confidence_score,
-            "timestamp": verif.timestamp
-        })
-    
-    log_audit(db, admin["user_id"], "GENERATE", "report", "verifications", "Generated verification report")
-    return {"report_type": "verifications", "data": report_data, "generated_at": datetime.utcnow()}
+    """Generate AI-powered verification report"""
+    try:
+        report_service = ReportService()
+        report = report_service.generate_verification_report(db)
+        log_audit(db, admin["user_id"], "GENERATE", "report", "verification", "Generated AI verification report")
+        return report
+    except Exception as e:
+        print(f"Error generating verification report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate report")
+
+@router.get("/reports/system")
+async def generate_system_report(admin=Depends(require_admin_role), db: Session = Depends(get_db)):
+    """Generate AI-powered system activity report"""
+    try:
+        report_service = ReportService()
+        report = report_service.generate_system_report(db)
+        log_audit(db, admin["user_id"], "GENERATE", "report", "system", "Generated AI system report")
+        return report
+    except Exception as e:
+        print(f"Error generating system report: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to generate report")
 
 # ==================== MODULE 8: FEEDBACK MANAGEMENT ====================
 

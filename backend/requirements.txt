@@ -13,3 +13,4 @@ sqlalchemy
 alembic
 faker
 reportlab
+matplotlib

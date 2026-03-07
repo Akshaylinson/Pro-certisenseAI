@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import ReportDialog from './ReportDialog';
 
 const API_URL = 'http://localhost:8000';
 
@@ -16,6 +17,12 @@ const AdminDashboard = () => {
   const [showInstituteForm, setShowInstituteForm] = useState(false);
   const [showVerifierForm, setShowVerifierForm] = useState(false);
   const [formData, setFormData] = useState({});
+  
+  // Report dialog state
+  const [showReportDialog, setShowReportDialog] = useState(false);
+  const [reportData, setReportData] = useState(null);
+  const [reportType, setReportType] = useState('');
+  const [reportLoading, setReportLoading] = useState(false);
 
   const token = localStorage.getItem('admin_token');
   const headers = { Authorization: `Bearer ${token}` };
@@ -204,6 +211,23 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     window.location.href = '/';
+  };
+
+  const generateReport = async (type) => {
+    setReportType(type);
+    setReportLoading(true);
+    setShowReportDialog(true);
+    
+    try {
+      const response = await axios.get(`${API_URL}/admin/reports/${type}`, { headers });
+      setReportData(response.data);
+    } catch (error) {
+      console.error('Report generation error:', error);
+      alert('Failed to generate report. Please try again.');
+      setShowReportDialog(false);
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   return (
@@ -707,39 +731,63 @@ const AdminDashboard = () => {
             {/* MODULE 7: Generate Reports */}
             {activeModule === 'reports' && !loading && (
               <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Generate Reports</h2>
+                <h2 className="text-3xl font-bold mb-6 text-gray-800">AI-Powered Reports</h2>
+                <p className="text-gray-600 mb-6">Generate comprehensive reports with AI insights and visual analytics</p>
+                
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
                     <h3 className="font-bold text-lg mb-2">📊 Institute Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Comprehensive report of all institutes with student and certificate counts</p>
-                    <button className="bg-blue-500 text-white px-6 py-2 rounded-lg w-full hover:bg-blue-600 transition">
-                      Generate Report
+                    <p className="text-sm text-gray-600 mb-4">AI-powered analysis of institute performance with student and certificate metrics</p>
+                    <button 
+                      onClick={() => generateReport('institute')}
+                      className="bg-blue-500 text-white px-6 py-2 rounded-lg w-full hover:bg-blue-600 transition"
+                    >
+                      Generate AI Report
                     </button>
                   </div>
                   
                   <div className="bg-green-50 p-6 rounded-lg border border-green-200">
                     <h3 className="font-bold text-lg mb-2">📜 Certificate Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Detailed certificate issuance and status report</p>
-                    <button className="bg-green-500 text-white px-6 py-2 rounded-lg w-full hover:bg-green-600 transition">
-                      Generate Report
+                    <p className="text-sm text-gray-600 mb-4">Detailed certificate analytics with AI insights on issuance patterns and status</p>
+                    <button 
+                      onClick={() => generateReport('certificates')}
+                      className="bg-green-500 text-white px-6 py-2 rounded-lg w-full hover:bg-green-600 transition"
+                    >
+                      Generate AI Report
                     </button>
                   </div>
                   
                   <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
                     <h3 className="font-bold text-lg mb-2">✅ Verification Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Verification activity and success rate analysis</p>
-                    <button className="bg-purple-500 text-white px-6 py-2 rounded-lg w-full hover:bg-purple-600 transition">
-                      Generate Report
+                    <p className="text-sm text-gray-600 mb-4">AI analysis of verification success rates and security patterns</p>
+                    <button 
+                      onClick={() => generateReport('verifications')}
+                      className="bg-purple-500 text-white px-6 py-2 rounded-lg w-full hover:bg-purple-600 transition"
+                    >
+                      Generate AI Report
                     </button>
                   </div>
                   
                   <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
                     <h3 className="font-bold text-lg mb-2">📈 System Activity Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Complete system activity and performance metrics</p>
-                    <button className="bg-orange-500 text-white px-6 py-2 rounded-lg w-full hover:bg-orange-600 transition">
-                      Generate Report
+                    <p className="text-sm text-gray-600 mb-4">Complete system overview with AI-powered performance insights</p>
+                    <button 
+                      onClick={() => generateReport('system')}
+                      className="bg-orange-500 text-white px-6 py-2 rounded-lg w-full hover:bg-orange-600 transition"
+                    >
+                      Generate AI Report
                     </button>
                   </div>
+                </div>
+                
+                <div className="mt-8 bg-yellow-50 p-6 rounded-lg border border-yellow-200">
+                  <h3 className="font-bold text-lg mb-2">🤖 AI Features</h3>
+                  <ul className="text-sm text-gray-700 space-y-1">
+                    <li>• Executive summaries with key insights</li>
+                    <li>• System health analysis and risk indicators</li>
+                    <li>• Professional charts and visualizations</li>
+                    <li>• Downloadable reports and images</li>
+                  </ul>
                 </div>
               </div>
             )}
@@ -799,6 +847,19 @@ const AdminDashboard = () => {
           </div>
         </div>
       </div>
+      
+      {/* Report Dialog */}
+      <ReportDialog
+        isOpen={showReportDialog}
+        onClose={() => {
+          setShowReportDialog(false);
+          setReportData(null);
+          setReportType('');
+        }}
+        reportData={reportData}
+        reportType={reportType}
+        loading={reportLoading}
+      />
     </div>
   );
 };

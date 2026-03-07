@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, File, UploadFile, Header, Query, Form
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import Optional
 import uuid
 from datetime import datetime
@@ -29,6 +30,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount static files for report images
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Include admin router
 app.include_router(admin_router)
