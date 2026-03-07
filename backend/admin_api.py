@@ -87,32 +87,41 @@ async def add_institute(
     db: Session = Depends(get_db)
 ):
     """Add new institute"""
-    from auth_db import log_audit, hash_password
-    # Check if email exists
-    existing = db.query(Institute).filter(Institute.email == email).first()
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-    
-    # Generate institute ID
-    count = db.query(Institute).count() + 1
-    institute_id = f"INST{count:05d}"
-    
-    new_institute = Institute(
-        id=str(uuid.uuid4()),
-        institute_id=institute_id,
-        name=institute_name,
-        email=email,
-        password_hash=hash_password(password),
-        location=location,
-        registration_number=registration_number or f"REG{count:05d}",
-        approval_status="approved",
-        is_verified=True,
-        created_at=datetime.utcnow()
-    )
-    db.add(new_institute)
-    db.commit()
-    log_audit(db, admin["user_id"], "CREATE", "institute", new_institute.id, f"Added institute: {institute_name}")
-    return {"message": "Institute added successfully", "institute_id": institute_id}
+    import traceback
+    from auth_db import hash_password
+    try:
+        # Check if email exists
+        existing = db.query(Institute).filter(Institute.email == email).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+
+        # Generate institute ID
+        count = db.query(Institute).count() + 1
+        institute_id = f"INST{count:05d}"
+
+        new_institute = Institute(
+            id=str(uuid.uuid4()),
+            institute_id=institute_id,
+            name=institute_name,
+            email=email,
+            password_hash=hash_password(password),
+            location=location,
+            registration_number=registration_number or f"REG{count:05d}",
+            approval_status="approved",
+            is_verified=True,
+            created_at=datetime.utcnow()
+        )
+        db.add(new_institute)
+        db.commit()
+        log_audit(db, admin["user_id"], "CREATE", "institute", new_institute.id, f"Added institute: {institute_name}")
+        return {"message": "Institute added successfully", "institute_id": institute_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        print(f"[add_institute ERROR] {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Failed to add institute: {str(e)}")
 
 @router.put("/institutes/{institute_id}")
 async def edit_institute(
@@ -125,7 +134,6 @@ async def edit_institute(
     db: Session = Depends(get_db)
 ):
     """Edit institute information"""
-    from auth_db import log_audit
     institute = db.query(Institute).filter(Institute.id == institute_id).first()
     if not institute:
         raise HTTPException(status_code=404, detail="Institute not found")

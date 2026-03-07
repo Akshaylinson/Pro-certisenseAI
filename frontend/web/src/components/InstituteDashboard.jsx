@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import AIAssistantWidget from './AIAssistantWidget';
+import axios from 'axios';
 
 const InstituteDashboard = () => {
   const { user, token, logout } = useAuth();
@@ -15,6 +15,10 @@ const InstituteDashboard = () => {
   const [profileImage, setProfileImage] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [chatMessages, setChatMessages] = useState([
+    { role: 'bot', content: 'Hello! I\'m your institute assistant. Ask me about students, certificates, or recent activity.' }
+  ]);
+  const [chatInput, setChatInput] = useState('');
 
   const apiCall = async (endpoint, method = 'GET', body = null) => {
     try {
@@ -183,6 +187,30 @@ const InstituteDashboard = () => {
     } catch (error) {
       console.error('Certificate issuance error:', error);
       alert(`Error issuing certificate: ${error.message}`);
+    }
+  };
+
+  const sendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    const userMessage = { role: 'user', content: chatInput };
+    setChatMessages([...chatMessages, userMessage]);
+    setChatInput('');
+
+    try {
+      const res = await axios.get(
+        `http://localhost:8000/institute/ai-query`,
+        { 
+          params: { query: chatInput },
+          headers: { 'Authorization': `Bearer ${token}` }
+        }
+      );
+      const botMessage = { role: 'bot', content: res.data.response };
+      setChatMessages([...chatMessages, userMessage, botMessage]);
+    } catch (err) {
+      console.error('Chat error:', err);
+      const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error. Please try again.' };
+      setChatMessages([...chatMessages, userMessage, errorMessage]);
     }
   };
 
@@ -528,6 +556,54 @@ const InstituteDashboard = () => {
     </div>
   );
 
+  const renderChatbot = () => (
+    <div className="space-y-6">
+      <h3 className="text-lg font-semibold">🤖 Institute Assistant</h3>
+      <p className="text-gray-600 text-sm">Ask me about your students, certificates, and institute statistics.</p>
+      
+      <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto mb-4 border border-gray-200">
+        {chatMessages.map((msg, idx) => (
+          <div key={idx} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+            <div className={`inline-block max-w-[80%] px-4 py-3 rounded-lg shadow-sm ${
+              msg.role === 'user' 
+                ? 'bg-blue-500 text-white rounded-br-none' 
+                : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
+            }`}>
+              <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          value={chatInput}
+          onChange={(e) => setChatInput(e.target.value)}
+          onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          placeholder="Ask: 'Show statistics' or 'How many students?'"
+        />
+        <button
+          onClick={sendChatMessage}
+          className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold transition"
+        >
+          Send
+        </button>
+      </div>
+      
+      <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+        <p className="text-sm text-blue-800 font-semibold mb-2">💡 Try asking:</p>
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <button onClick={() => setChatInput('Show my statistics')} className="text-left text-blue-600 hover:underline">• Show my statistics</button>
+          <button onClick={() => setChatInput('How many students?')} className="text-left text-blue-600 hover:underline">• How many students?</button>
+          <button onClick={() => setChatInput('Certificate information')} className="text-left text-blue-600 hover:underline">• Certificate information</button>
+          <button onClick={() => setChatInput('Recent activity')} className="text-left text-blue-600 hover:underline">• Recent activity</button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-white shadow-sm border-b">
@@ -554,7 +630,8 @@ const InstituteDashboard = () => {
                 { key: 'dashboard', label: 'Dashboard' },
                 { key: 'profile', label: 'Profile' },
                 { key: 'students', label: 'Manage Students' },
-                { key: 'certificates', label: 'Issue Certificates' }
+                { key: 'certificates', label: 'Issue Certificates' },
+                { key: 'chatbot', label: '🤖 Assistant' }
               ].map(tab => (
                 <button
                   key={tab.key}
@@ -577,16 +654,11 @@ const InstituteDashboard = () => {
               {activeTab === 'profile' && renderProfile()}
               {activeTab === 'students' && renderStudents()}
               {activeTab === 'certificates' && renderCertificates()}
+              {activeTab === 'chatbot' && renderChatbot()}
             </div>
           </div>
         </div>
       </div>
-      
-      {/* AI Assistant Widget */}
-      <AIAssistantWidget 
-        role="Institute" 
-        apiEndpoint="/institute/ai-query" 
-      />
     </div>
   );
 };

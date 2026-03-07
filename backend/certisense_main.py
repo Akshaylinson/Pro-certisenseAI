@@ -26,7 +26,7 @@ app = FastAPI(title="CertiSense AI - Enhanced Blockchain Certificate System", ve
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -774,17 +774,22 @@ async def admin_ai_query(request: dict, admin = Depends(require_admin), db: Sess
     response = ai_service.process_admin_query(query, db, session_id)
     return {"response": response}
 
-@app.post("/institute/ai-query")
-async def institute_ai_query(request: dict, institute = Depends(require_institute), db: Session = Depends(get_db)):
-    """AI assistant for institute dashboard"""
-    query = request.get('query', '')
-    session_id = request.get('session_id', 'default')
+@app.get("/institute/ai-query")
+async def institute_ai_query(query: str = Query(...), institute = Depends(require_institute), db: Session = Depends(get_db)):
+    """AI assistant for institute dashboard with database context"""
+    from institute_chatbot import InstituteChatbot
     
     if not query:
         return {"response": "Please ask me a question about your institute."}
     
-    response = ai_service.process_institute_query(query, db, institute["user_id"], session_id)
-    return {"response": response}
+    try:
+        response = InstituteChatbot.process_query(query, institute["user_id"], db)
+        return {"response": response, "timestamp": datetime.utcnow().isoformat()}
+    except Exception as e:
+        print(f"Institute AI Query Error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return {"response": "Sorry, I encountered an error. Please try again.", "error": str(e)}
 
 @app.get("/verifier/ai-query")
 async def verifier_ai_query(query: str = Query(...), verifier = Depends(require_verifier), db: Session = Depends(get_db)):

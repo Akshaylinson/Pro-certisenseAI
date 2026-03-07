@@ -33,7 +33,7 @@ const LoginForm = () => {
           body = { institute_name: instituteName, username, password, email, location };
         } else {
           endpoint = '/auth/institute/login';
-          body = { username, password };
+          body = { username: email, password };
         }
       } else if (userType === 'student') {
         if (isRegister) {
@@ -116,7 +116,6 @@ const LoginForm = () => {
                   <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Location" className="w-full px-3 py-2 border border-gray-300 rounded-md" />
                 </>
               )}
-              <input type="text" value={username} onChange={(e) => setUsername(e.target.value)} placeholder="Username" className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
               <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
               <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password" className="w-full px-3 py-2 border border-gray-300 rounded-md" required />
             </>
