@@ -251,36 +251,79 @@ const VerifierDashboard = () => {
                 {verificationResult && (
                   <div className="mt-6 bg-gray-50 p-6 rounded-lg border">
                     <h3 className="font-bold text-lg mb-4">Verification Result</h3>
-                    <div className="space-y-2">
-                      <p><strong>Result:</strong> <span className={`px-3 py-1 rounded ${
-                        verificationResult.verification_result === 'valid' ? 'bg-green-100 text-green-800' :
-                        verificationResult.verification_result === 'invalid' ? 'bg-red-100 text-red-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>{verificationResult.verification_result.toUpperCase()}</span></p>
-                      <p><strong>Confidence:</strong> {(verificationResult.confidence_score * 100).toFixed(1)}%</p>
-                      <p><strong>Blockchain Verified:</strong> {verificationResult.blockchain_verified ? '✅ Yes' : '❌ No'}</p>
-                      <p><strong>Processing Time:</strong> {verificationResult.processing_time.toFixed(2)}s</p>
-                      
-                      <div className="mt-4 flex gap-2">
-                        <button
-                          onClick={() => generateProof(verificationResult.verification_id)}
-                          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-                        >
-                          Generate Proof
-                        </button>
-                        <button
-                          onClick={() => viewAIAnalysis(verificationResult.verification_id)}
-                          className="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600"
-                        >
-                          AI Analysis
-                        </button>
-                        <button
-                          onClick={() => viewBlockchainDetails(verificationResult.certificate_hash)}
-                          className="bg-indigo-500 text-white px-4 py-2 rounded hover:bg-indigo-600"
-                        >
-                          Blockchain Details
-                        </button>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <strong>Status:</strong>
+                        <span className={`px-4 py-2 rounded-lg font-semibold ${
+                          verificationResult.status === 'valid' ? 'bg-green-100 text-green-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>
+                          {verificationResult.status === 'valid' ? '✅ VALID CERTIFICATE' : '❌ INVALID CERTIFICATE'}
+                        </span>
                       </div>
+                      
+                      {verificationResult.status === 'valid' && (
+                        <div className="bg-white p-4 rounded-lg border border-green-200">
+                          <h4 className="font-semibold mb-3 text-green-800">Certificate Details</h4>
+                          <div className="grid grid-cols-2 gap-3 text-sm">
+                            <div>
+                              <p className="text-gray-600">Certificate ID:</p>
+                              <p className="font-mono font-semibold">{verificationResult.certificate_id}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Certificate Name:</p>
+                              <p className="font-semibold">{verificationResult.certificate_name}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Student Name:</p>
+                              <p className="font-semibold">{verificationResult.student_name}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Student ID:</p>
+                              <p className="font-mono">{verificationResult.student_id}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Institute:</p>
+                              <p className="font-semibold">{verificationResult.institute_name}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Institute ID:</p>
+                              <p className="font-mono">{verificationResult.institute_id}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Issue Date:</p>
+                              <p>{verificationResult.issue_date ? new Date(verificationResult.issue_date).toLocaleDateString() : 'N/A'}</p>
+                            </div>
+                            <div>
+                              <p className="text-gray-600">Verification Count:</p>
+                              <p className="font-semibold">{verificationResult.verification_count}</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      <div className="bg-blue-50 p-3 rounded">
+                        <p><strong>Certificate Hash:</strong></p>
+                        <p className="font-mono text-xs break-all">{verificationResult.certificate_hash}</p>
+                      </div>
+                      
+                      <p><strong>Confidence Score:</strong> {(verificationResult.confidence_score * 100).toFixed(1)}%</p>
+                      <p><strong>Blockchain Verified:</strong> {verificationResult.blockchain_verified ? '✅ Yes' : '❌ No'}</p>
+                      
+                      {verificationResult.explanation && (
+                        <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                          <p className="font-semibold mb-1">Explanation:</p>
+                          <p className="text-sm">{verificationResult.explanation}</p>
+                        </div>
+                      )}
+                      
+                      {verificationResult.message && (
+                        <div className={`p-3 rounded ${
+                          verificationResult.status === 'valid' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+                        }`}>
+                          <p className="text-sm">{verificationResult.message}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

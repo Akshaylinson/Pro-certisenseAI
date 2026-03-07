@@ -355,6 +355,14 @@ async def issue_certificate(
         cert_id = f"CERT-{uuid.uuid4().hex[:12].upper()}"
         print(f"Creating certificate record with ID: {cert_id}")
         
+        # Save certificate file to disk
+        import os
+        os.makedirs("uploads/certificates", exist_ok=True)
+        file_path = f"uploads/certificates/{cert_id}.pdf"
+        with open(file_path, "wb") as f:
+            f.write(content)
+        print(f"Certificate file saved: {file_path}")
+        
         new_cert = Certificate(
             id=cert_id,
             name=file.filename,
@@ -461,8 +469,54 @@ async def get_student_certificates(student = Depends(require_student)):
         if not student_data:
             raise HTTPException(status_code=404, detail="Student not found")
         
-        certificates = BlockchainService.get_student_certificates(student_data.student_id)
+        # Get certificates from database
+        certs = db.query(Certificate).filter(Certificate.student_id == student_data.id).all()
+        certificates = [
+            {
+                "certificate_id": c.id,
+                "name": c.name,
+                "hash": c.hash,
+                "chain_hash": c.chain_hash,
+                "status": c.status.value,
+                "issue_date": c.issue_date.isoformat() if c.issue_date else None,
+                "verification_count": c.verification_count or 0
+            }
+            for c in certs
+        ]
         return {"certificates": certificates}
+    finally:
+        db.close()
+
+@app.get("/student/certificates/{certificate_id}/download")
+async def download_certificate(certificate_id: str, student = Depends(require_student)):
+    """Download certificate PDF file"""
+    db = get_db_session()
+    try:
+        student_data = db.query(Student).filter(Student.id == student["user_id"]).first()
+        if not student_data:
+            raise HTTPException(status_code=404, detail="Student not found")
+        
+        # Find certificate
+        cert = db.query(Certificate).filter(
+            Certificate.id == certificate_id,
+            Certificate.student_id == student_data.id
+        ).first()
+        
+        if not cert:
+            raise HTTPException(status_code=404, detail="Certificate not found or access denied")
+        
+        # Check if file exists
+        import os
+        file_path = f"uploads/certificates/{certificate_id}.pdf"
+        if not os.path.exists(file_path):
+            raise HTTPException(status_code=404, detail="Certificate file not found")
+        
+        from fastapi.responses import FileResponse
+        return FileResponse(
+            path=file_path,
+            filename=f"{cert.name}",
+            media_type="application/pdf"
+        )
     finally:
         db.close()
 
@@ -566,52 +620,110 @@ async def get_verifier_feedback(verifier = Depends(require_verifier), db: Sessio
 
 @app.post("/verifier/verify")
 async def verify_certificate(file: UploadFile = File(...), verifier = Depends(require_verifier)):
+    """Verify certificate by comparing uploaded file hash with stored hash"""
     db = get_db_session()
     try:
+        print(f"\n=== Certificate Verification Started ===")
+        print(f"Verifier ID: {verifier['user_id']}")
+        print(f"File: {file.filename}")
+        
+        # Read uploaded file
         content = await file.read()
-        file_hash = generate_file_hash(content)
+        print(f"File size: {len(content)} bytes")
         
-        ai_result = AIValidationService.validate_certificate_content(content, file.filename)
-        blockchain_data = BlockchainService.verify_certificate_hash(file_hash)
-        is_valid = blockchain_data is not None and blockchain_data.get("valid", False)
+        # Generate hash of uploaded file
+        uploaded_hash = generate_file_hash(content)
+        print(f"Uploaded file hash: {uploaded_hash}")
         
-        explanation = AIValidationService.explain_verification_result(is_valid, blockchain_data)
+        # Search for certificate with matching hash
+        cert = db.query(Certificate).filter(Certificate.hash == uploaded_hash).first()
         
-        BlockchainService.add_verification(file_hash, verifier["user_id"], is_valid)
+        if cert:
+            # Certificate found - VALID
+            print(f"✅ Certificate found: {cert.id}")
+            is_valid = True
+            
+            # Get student and institute details
+            student = db.query(Student).filter(Student.id == cert.student_id).first()
+            institute = db.query(Institute).filter(Institute.id == cert.institute_id).first()
+            
+            # AI validation
+            ai_result = AIValidationService.validate_certificate_content(content, file.filename)
+            
+            # Blockchain verification
+            blockchain_data = BlockchainService.verify_certificate_hash(uploaded_hash)
+            
+            explanation = f"Certificate verified successfully. Issued by {institute.name if institute else 'Unknown'} to {student.name if student else 'Unknown'}."
+            
+            # Update verification count
+            cert.verification_count = (cert.verification_count or 0) + 1
+            
+            result_data = {
+                "status": "valid",
+                "certificate_id": cert.id,
+                "certificate_name": cert.name,
+                "student_id": student.student_id if student else None,
+                "student_name": student.name if student else None,
+                "institute_id": institute.institute_id if institute else None,
+                "institute_name": institute.name if institute else None,
+                "issue_date": cert.issue_date.isoformat() if cert.issue_date else None,
+                "verification_count": cert.verification_count,
+                "message": "Certificate verified successfully"
+            }
+        else:
+            # Certificate not found - INVALID/FAKE
+            print(f"❌ Certificate not found in database")
+            is_valid = False
+            ai_result = AIValidationService.validate_certificate_content(content, file.filename)
+            blockchain_data = None
+            explanation = "Certificate not found in database. This may be a fake or modified certificate."
+            
+            result_data = {
+                "status": "invalid",
+                "message": "Certificate not found or has been modified"
+            }
         
-        # Find certificate in database
-        cert = db.query(Certificate).filter(Certificate.hash == file_hash).first()
-        
-        # Save to database
+        # Save verification to database
         from database import VerificationStatusEnum
         verification_id = str(uuid.uuid4())
         new_verification = Verification(
             id=verification_id,
             certificate_id=cert.id if cert else None,
-            certificate_hash=file_hash,
+            certificate_hash=uploaded_hash,
             verifier_id=verifier["user_id"],
             result=is_valid,
-            confidence_score=ai_result.get("confidence", 0.0),
-            status=VerificationStatusEnum.VERIFIED if is_valid else VerificationStatusEnum.FAILED,
+            confidence_score=ai_result.get("confidence", 0.0) if ai_result else 0.0,
+            status=VerificationStatusEnum.VALID if is_valid else VerificationStatusEnum.INVALID,
             blockchain_integrity=is_valid,
             timestamp=datetime.utcnow()
         )
         db.add(new_verification)
+        
+        # Add to blockchain
+        BlockchainService.add_verification(uploaded_hash, verifier["user_id"], is_valid)
+        
         db.commit()
+        
+        print(f"Verification saved: {verification_id}")
+        print(f"Result: {'VALID' if is_valid else 'INVALID'}")
+        print(f"=== Certificate Verification Completed ===\n")
         
         return {
             "verification_id": verification_id,
             "verification_result": "valid" if is_valid else "invalid",
             "result": is_valid,
-            "certificate_hash": file_hash,
-            "confidence_score": ai_result.get("confidence", 0.0),
+            "certificate_hash": uploaded_hash,
+            "confidence_score": ai_result.get("confidence", 0.0) if ai_result else 0.0,
             "blockchain_verified": is_valid,
-            "processing_time": ai_result.get("processing_time", 0.0),
-            "hash": file_hash,
-            "ai_validation": ai_result,
-            "blockchain_data": blockchain_data,
-            "explanation": explanation
+            "explanation": explanation,
+            **result_data
         }
+    except Exception as e:
+        print(f"❌ Verification error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        db.rollback()
+        raise HTTPException(status_code=500, detail=f"Verification failed: {str(e)}")
     finally:
         db.close()
 

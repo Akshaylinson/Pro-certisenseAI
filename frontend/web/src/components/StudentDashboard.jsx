@@ -126,16 +126,52 @@ const StudentDashboard = () => {
       ) : (
         <div className="space-y-3">
           {certificates.map((cert, idx) => (
-            <div key={idx} className="border p-4 rounded-lg hover:shadow-md cursor-pointer" onClick={() => loadCertificateDetails(cert.hash)}>
+            <div key={idx} className="border p-4 rounded-lg hover:shadow-md">
               <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Certificate {idx + 1}</p>
-                  <p className="text-sm text-gray-600">Hash: {cert.hash.substring(0, 16)}...</p>
-                  <p className="text-sm text-gray-600">Issued: {new Date(cert.timestamp).toLocaleDateString()}</p>
+                <div className="flex-1">
+                  <p className="font-medium">{cert.name || `Certificate ${idx + 1}`}</p>
+                  <p className="text-sm text-gray-600">ID: {cert.certificate_id}</p>
+                  <p className="text-sm text-gray-600">Hash: {cert.hash?.substring(0, 16)}...</p>
+                  <p className="text-sm text-gray-600">Issued: {cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}</p>
+                  <p className="text-sm text-gray-600">Verifications: {cert.verification_count || 0}</p>
                 </div>
-                <span className={`px-3 py-1 rounded text-white ${cert.valid ? 'bg-green-500' : 'bg-red-500'}`}>
-                  {cert.valid ? 'Valid' : 'Revoked'}
-                </span>
+                <div className="flex flex-col gap-2">
+                  <span className={`px-3 py-1 rounded text-white text-center ${cert.status === 'active' ? 'bg-green-500' : 'bg-red-500'}`}>
+                    {cert.status === 'active' ? 'Valid' : 'Revoked'}
+                  </span>
+                  <a
+                    href={`http://localhost:8000/student/certificates/${cert.certificate_id}/download`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      fetch(`http://localhost:8000/student/certificates/${cert.certificate_id}/download`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                      })
+                      .then(response => response.blob())
+                      .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = cert.name || `certificate_${cert.certificate_id}.pdf`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                      })
+                      .catch(err => alert('Error downloading certificate'));
+                    }}
+                    className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-center text-sm"
+                  >
+                    Download
+                  </a>
+                  <button
+                    onClick={() => cert.hash && loadCertificateDetails(cert.hash)}
+                    className="px-3 py-1 bg-gray-600 text-white rounded hover:bg-gray-700 text-sm"
+                  >
+                    Details
+                  </button>
+                </div>
               </div>
             </div>
           ))}
