@@ -41,11 +41,18 @@ def create_access_token(user_id: str, role: str, username: str) -> str:
 
 def verify_token(token: str) -> Optional[Dict]:
     try:
+        print(f"[verify_token] Decoding token with SECRET_KEY: {SECRET_KEY[:10]}...")
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        print(f"[verify_token] Token decoded successfully: {payload}")
         return payload
-    except jwt.ExpiredSignatureError:
+    except jwt.ExpiredSignatureError as e:
+        print(f"[verify_token] Token expired: {str(e)}")
         raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
+        print(f"[verify_token] Invalid token: {str(e)}")
+        raise HTTPException(status_code=401, detail="Invalid token")
+    except Exception as e:
+        print(f"[verify_token] Unexpected error: {str(e)}")
         raise HTTPException(status_code=401, detail="Invalid token")
 
 def authenticate_admin(username: str, password: str) -> Optional[str]:
@@ -55,10 +62,21 @@ def authenticate_admin(username: str, password: str) -> Optional[str]:
     return None
 
 def get_current_user(authorization: Optional[str] = Header(None)):
+    print(f"[auth_db] Authorization header: {authorization}")
     if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Authentication required")
+        print("[auth_db] No authorization header or invalid format")
+        raise HTTPException(status_code=401, detail="Invalid token")
+    
     token = authorization.split(" ")[1]
-    return verify_token(token)
+    print(f"[auth_db] Token extracted: {token[:20]}...")
+    
+    try:
+        payload = verify_token(token)
+        print(f"[auth_db] Token verified successfully: {payload}")
+        return payload
+    except Exception as e:
+        print(f"[auth_db] Token verification failed: {str(e)}")
+        raise
 
 def require_admin(user: Dict = Depends(get_current_user)):
     if user["role"] != "admin":
