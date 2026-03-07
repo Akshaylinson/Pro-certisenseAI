@@ -11,3 +11,5 @@ PyJWT
 passlib[bcrypt]
 sqlalchemy
 alembic
+faker
+reportlab
