@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import ReportDialog from './ReportDialog';
 import AIAssistantWidget from './AIAssistantWidget';
+import Layout from './Layout';
+import { StatCard, InfoCard, Button, Badge } from './UIComponents';
 
 const API_URL = 'http://localhost:8000';
 
@@ -209,6 +211,17 @@ const AdminDashboard = () => {
     }
   };
 
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'institutes', label: 'Institutes' },
+    { id: 'certificates', label: 'Certificates' },
+    { id: 'students', label: 'Students' },
+    { id: 'verifiers', label: 'Verifiers' },
+    { id: 'verifications', label: 'Verifications' },
+    { id: 'reports', label: 'Reports' },
+    { id: 'feedback', label: 'Feedback' }
+  ];
+
   const handleLogout = () => {
     localStorage.removeItem('admin_token');
     window.location.href = '/';
@@ -232,623 +245,735 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Top Navigation */}
-      <nav className="bg-blue-600 text-white shadow-lg">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">🔐 CertiSense AI v3.0</h1>
-            <p className="text-sm text-blue-200">Admin Control System</p>
+    <>
+      <Layout
+        title="CertiSense AI v3.0"
+        subtitle="Admin Control System"
+        userRole="Administrator"
+        onLogout={handleLogout}
+        navigationItems={navigationItems}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        themeColor="blue"
+      >
+        <div>
+        {loading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="loading-spinner mx-auto mb-4"></div>
+              <p className="text-secondary-600">Loading...</p>
+            </div>
           </div>
-          <button 
-            onClick={handleLogout} 
-            className="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg font-semibold transition"
-          >
-            Logout
-          </button>
-        </div>
-      </nav>
+        )}
 
-      <div className="container mx-auto mt-6 px-4">
-        <div className="flex gap-6">
-          {/* Sidebar Navigation */}
-          <div className="w-64 bg-white rounded-lg shadow-lg p-4 h-fit">
-            <h2 className="font-bold text-lg mb-4 text-gray-700">Admin Modules</h2>
-            <ul className="space-y-2">
-              {[
-                { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
-                { id: 'institutes', label: '🏫 Institutes', icon: '🏫' },
-                { id: 'certificates', label: '📜 Certificates', icon: '📜' },
-                { id: 'students', label: '👨‍🎓 Students', icon: '👨‍🎓' },
-                { id: 'verifiers', label: '🔍 Verifiers', icon: '🔍' },
-                { id: 'verifications', label: '✅ Verifications', icon: '✅' },
-                { id: 'reports', label: '📈 Reports', icon: '📈' },
-                { id: 'feedback', label: '💬 Feedback', icon: '💬' }
-              ].map(mod => (
-                <li key={mod.id}>
-                  <button
-                    onClick={() => setActiveModule(mod.id)}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition ${
-                      activeModule === mod.id 
-                        ? 'bg-blue-500 text-white shadow-md' 
-                        : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {mod.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Main Content Area */}
-          <div className="flex-1 bg-white rounded-lg shadow-lg p-6">
-            {loading && (
-              <div className="text-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading...</p>
-              </div>
-            )}
-
-            {/* MODULE 1: Dashboard Analytics */}
+        {/* MODULE 1: Dashboard Analytics */}
             {activeModule === 'dashboard' && analytics && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">System Analytics</h2>
+              <div className="space-y-6">
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-secondary-800 mb-2">System Analytics</h2>
+                  <p className="text-secondary-600">Overview of system performance and metrics</p>
+                </div>
                 
                 {/* Key Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                  <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Total Institutes</h3>
-                    <p className="text-4xl font-bold">{analytics.total_institutes}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-400 to-green-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Total Students</h3>
-                    <p className="text-4xl font-bold">{analytics.total_students}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-yellow-400 to-yellow-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Total Certificates</h3>
-                    <p className="text-4xl font-bold">{analytics.total_certificates}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Total Verifications</h3>
-                    <p className="text-4xl font-bold">{analytics.total_verifications}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <StatCard 
+                    title="Total Institutes"
+                    value={analytics.total_institutes}
+                    icon="fa-building-columns"
+                    color="blue"
+                  />
+                  <StatCard 
+                    title="Total Students"
+                    value={analytics.total_students}
+                    icon="fa-user-graduate"
+                    color="green"
+                  />
+                  <StatCard 
+                    title="Total Certificates"
+                    value={analytics.total_certificates}
+                    icon="fa-certificate"
+                    color="yellow"
+                  />
+                  <StatCard 
+                    title="Total Verifications"
+                    value={analytics.total_verifications}
+                    icon="fa-check-double"
+                    color="purple"
+                  />
                 </div>
 
                 {/* Performance Metrics */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <h3 className="font-bold text-lg mb-4">Verification Success Rate</h3>
-                    <div className="flex items-center">
-                      <div className="text-5xl font-bold text-green-600">{analytics.verification_success_rate}%</div>
-                      <div className="ml-4 text-sm text-gray-600">
-                        <p>✅ Successful verifications</p>
-                        <p>📊 System performance indicator</p>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <InfoCard title="Verification Success Rate">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-5xl font-bold text-green-600 mb-2">{analytics.verification_success_rate}%</div>
+                        <p className="text-secondary-600">Successful verifications</p>
+                        <p className="text-sm text-secondary-500 mt-1">System performance indicator</p>
+                      </div>
+                      <div className="text-6xl text-green-500 opacity-20">
+                        <i className="fas fa-chart-line"></i>
                       </div>
                     </div>
-                  </div>
+                  </InfoCard>
 
-                  <div className="bg-gray-50 p-6 rounded-lg border">
-                    <h3 className="font-bold text-lg mb-4">Certificate Status Distribution</h3>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center">
-                        <span className="text-green-600">● Active</span>
-                        <span className="font-bold">{analytics.certificate_status.active}</span>
+                  <InfoCard title="Certificate Status Distribution">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                          <span className="font-medium text-secondary-700">Active</span>
+                        </div>
+                        <span className="text-2xl font-bold text-green-600">{analytics.certificate_status.active}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-red-600">● Revoked</span>
-                        <span className="font-bold">{analytics.certificate_status.revoked}</span>
+                      <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                          <span className="font-medium text-secondary-700">Revoked</span>
+                        </div>
+                        <span className="text-2xl font-bold text-red-600">{analytics.certificate_status.revoked}</span>
                       </div>
-                      <div className="flex justify-between items-center">
-                        <span className="text-orange-600">● Suspicious</span>
-                        <span className="font-bold">{analytics.certificate_status.suspicious}</span>
+                      <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                          <span className="font-medium text-secondary-700">Suspicious</span>
+                        </div>
+                        <span className="text-2xl font-bold text-orange-600">{analytics.certificate_status.suspicious}</span>
                       </div>
                     </div>
-                  </div>
+                  </InfoCard>
                 </div>
 
                 {/* Recent Activity */}
-                <div className="mt-6 bg-blue-50 p-6 rounded-lg border border-blue-200">
-                  <h3 className="font-bold text-lg mb-2">Recent Activity (30 Days)</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-gray-600">New Certificates</p>
-                      <p className="text-2xl font-bold text-blue-600">{analytics.recent_certificates_30d}</p>
+                <InfoCard title="Recent Activity (30 Days)">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <i className="fas fa-file-certificate text-blue-600 text-xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-sm text-secondary-600">New Certificates</p>
+                        <p className="text-2xl font-bold text-blue-600">{analytics.recent_certificates_30d}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-gray-600">New Verifications</p>
-                      <p className="text-2xl font-bold text-blue-600">{analytics.recent_verifications_30d}</p>
+                    <div className="flex items-center gap-4 p-4 bg-purple-50 rounded-lg">
+                      <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                        <i className="fas fa-check-circle text-purple-600 text-xl"></i>
+                      </div>
+                      <div>
+                        <p className="text-sm text-secondary-600">New Verifications</p>
+                        <p className="text-2xl font-bold text-purple-600">{analytics.recent_verifications_30d}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 2: Manage Institutes */}
             {activeModule === 'institutes' && !loading && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-800">Manage Institutes</h2>
-                  <button
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-secondary-800">Manage Institutes</h2>
+                    <p className="text-secondary-600 text-sm mt-1">View and manage all registered institutes</p>
+                  </div>
+                  <Button 
                     onClick={() => setShowInstituteForm(true)}
-                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                    icon="fa-plus"
                   >
-                    + Add Institute
-                  </button>
+                    Add Institute
+                  </Button>
                 </div>
 
                 {showInstituteForm && (
-                  <div className="mb-6 bg-gray-50 p-6 rounded-lg border">
-                    <h3 className="font-bold text-lg mb-4">Add New Institute</h3>
+                  <InfoCard title="Add New Institute">
                     <form onSubmit={addInstitute} className="space-y-4">
-                      <div>
-                        <label className="block font-semibold mb-2">Institute Name *</label>
-                        <input
-                          type="text"
-                          required
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.name || ''}
-                          onChange={(e) => setFormData({...formData, name: e.target.value})}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-medium mb-2">Institute Name *</label>
+                          <input
+                            type="text"
+                            required
+                            className="w-full"
+                            value={formData.name || ''}
+                            onChange={(e) => setFormData({...formData, name: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-2">Email *</label>
+                          <input
+                            type="email"
+                            required
+                            className="w-full"
+                            value={formData.email || ''}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-2">Password *</label>
+                          <input
+                            type="password"
+                            required
+                            minLength="6"
+                            className="w-full"
+                            value={formData.password || ''}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-2">Location</label>
+                          <input
+                            type="text"
+                            className="w-full"
+                            value={formData.location || ''}
+                            onChange={(e) => setFormData({...formData, location: e.target.value})}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block font-semibold mb-2">Email *</label>
-                        <input
-                          type="email"
-                          required
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.email || ''}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold mb-2">Password *</label>
-                        <input
-                          type="password"
-                          required
-                          minLength="6"
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.password || ''}
-                          onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold mb-2">Location</label>
-                        <input
-                          type="text"
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.location || ''}
-                          onChange={(e) => setFormData({...formData, location: e.target.value})}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" variant="success" icon="fa-check">
                           Create Institute
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="secondary"
                           onClick={() => {setShowInstituteForm(false); setFormData({});}}
-                          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </form>
-                  </div>
+                  </InfoCard>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Institute ID</th>
-                        <th className="p-3 text-left">Name</th>
-                        <th className="p-3 text-left">Email</th>
-                        <th className="p-3 text-left">Location</th>
-                        <th className="p-3 text-center">Students</th>
-                        <th className="p-3 text-center">Certificates</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {institutes.map(inst => (
-                        <tr key={inst.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-sm">{inst.institute_id}</td>
-                          <td className="p-3 font-semibold">{inst.name}</td>
-                          <td className="p-3 text-sm">{inst.email}</td>
-                          <td className="p-3 text-sm">{inst.location || 'N/A'}</td>
-                          <td className="p-3 text-center">{inst.student_count}</td>
-                          <td className="p-3 text-center">{inst.certificate_count}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              inst.approval_status === 'approved' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                              {inst.approval_status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <button 
-                              onClick={() => deleteInstitute(inst.id)} 
-                              className="text-red-500 hover:text-red-700 font-semibold"
-                            >
-                              Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            )}
-
-            {/* MODULE 3: Manage Certificates */}
-            {activeModule === 'certificates' && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Manage Certificates</h2>
-                {certificates.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <p className="text-gray-600 text-lg">No certificates found in the system.</p>
-                    <p className="text-gray-500 text-sm mt-2">Certificates will appear here once institutes issue them to students.</p>
-                  </div>
-                ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse text-sm">
+                
+                <InfoCard>
+                  <div className="table-container">
+                    <table>
                       <thead>
-                        <tr className="bg-gray-200">
-                          <th className="p-3 text-left">Certificate ID</th>
-                          <th className="p-3 text-left">Student</th>
-                          <th className="p-3 text-left">Institute</th>
-                          <th className="p-3 text-center">Status</th>
-                          <th className="p-3 text-center">Verifications</th>
-                          <th className="p-3 text-left">Issue Date</th>
+                        <tr>
+                          <th>Institute ID</th>
+                          <th>Name</th>
+                          <th>Email</th>
+                          <th>Location</th>
+                          <th className="text-center">Students</th>
+                          <th className="text-center">Certificates</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-center">Actions</th>
                         </tr>
                       </thead>
                       <tbody>
-                        {certificates.map(cert => (
-                          <tr key={cert.id} className="border-b hover:bg-gray-50">
-                            <td className="p-3 font-mono text-xs">{cert.id.slice(0, 12)}...</td>
-                            <td className="p-3">{cert.student_name}</td>
-                            <td className="p-3">{cert.institute_name}</td>
-                            <td className="p-3 text-center">
-                              <span className={`px-2 py-1 rounded text-xs ${
-                                cert.status === 'active' ? 'bg-green-100 text-green-800' :
-                                cert.status === 'revoked' ? 'bg-red-100 text-red-800' :
-                                'bg-orange-100 text-orange-800'
-                              }`}>
-                                {cert.status}
-                              </span>
+                        {institutes.map(inst => (
+                          <tr key={inst.id}>
+                            <td className="font-mono text-xs">{inst.institute_id}</td>
+                            <td className="font-semibold">{inst.name}</td>
+                            <td>{inst.email}</td>
+                            <td>{inst.location || 'N/A'}</td>
+                            <td className="text-center">
+                              <Badge variant="info">{inst.student_count}</Badge>
                             </td>
-                            <td className="p-3 text-center font-semibold">{cert.verification_count}</td>
-                            <td className="p-3 text-xs">{cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}</td>
+                            <td className="text-center">
+                              <Badge variant="success">{inst.certificate_count}</Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant={inst.approval_status === 'approved' ? 'success' : 'warning'}>
+                                {inst.approval_status}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              <Button 
+                                size="sm" 
+                                variant="danger"
+                                onClick={() => deleteInstitute(inst.id)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
+                </InfoCard>
+              </div>
+            )}
+
+            {/* MODULE 3: Manage Certificates */}
+            {activeModule === 'certificates' && !loading && (
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Manage Certificates</h2>
+                  <p className="text-secondary-600 text-sm mt-1">View all certificates issued in the system</p>
+                </div>
+                
+                {certificates.length === 0 ? (
+                  <InfoCard>
+                    <div className="text-center py-12">
+                      <i className="fas fa-file-certificate text-6xl text-secondary-300 mb-4"></i>
+                      <p className="text-secondary-600 text-lg">No certificates found in the system.</p>
+                      <p className="text-secondary-500 text-sm mt-2">Certificates will appear here once institutes issue them to students.</p>
+                    </div>
+                  </InfoCard>
+                ) : (
+                  <InfoCard>
+                    <div className="table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Certificate ID</th>
+                            <th>Student</th>
+                            <th>Institute</th>
+                            <th className="text-center">Status</th>
+                            <th className="text-center">Verifications</th>
+                            <th>Issue Date</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {certificates.map(cert => (
+                            <tr key={cert.id}>
+                              <td className="font-mono text-xs">{cert.id.slice(0, 12)}...</td>
+                              <td className="font-medium">{cert.student_name}</td>
+                              <td>{cert.institute_name}</td>
+                              <td className="text-center">
+                                <Badge variant={cert.status === 'active' ? 'success' : cert.status === 'revoked' ? 'danger' : 'warning'}>
+                                  {cert.status}
+                                </Badge>
+                              </td>
+                              <td className="text-center">
+                                <Badge variant="info">{cert.verification_count}</Badge>
+                              </td>
+                              <td className="text-sm">
+                                {cert.issue_date ? new Date(cert.issue_date).toLocaleDateString() : 'N/A'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </InfoCard>
                 )}
               </div>
             )}
 
             {/* MODULE 4: View Students */}
             {activeModule === 'students' && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">View Students (Read-Only)</h2>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">View Students</h2>
+                  <p className="text-secondary-600 text-sm mt-1">Read-only view of all students in the system</p>
+                </div>
+                
                 {students.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <p className="text-gray-600 text-lg">No students found in the system.</p>
-                    <p className="text-gray-500 text-sm mt-2">Students will appear here once institutes add them.</p>
-                  </div>
+                  <InfoCard>
+                    <div className="text-center py-12">
+                      <i className="fas fa-user-graduate text-6xl text-secondary-300 mb-4"></i>
+                      <p className="text-secondary-600 text-lg">No students found in the system.</p>
+                      <p className="text-secondary-500 text-sm mt-2">Students will appear here once institutes add them.</p>
+                    </div>
+                  </InfoCard>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse">
-                      <thead>
-                        <tr className="bg-gray-200">
-                          <th className="p-3 text-left">Student ID</th>
-                          <th className="p-3 text-left">Name</th>
-                          <th className="p-3 text-left">Email</th>
-                          <th className="p-3 text-left">Institute</th>
-                          <th className="p-3 text-center">Certificates</th>
-                          <th className="p-3 text-center">Verifications</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {students.map(student => (
-                          <tr key={student.id} className="border-b hover:bg-gray-50">
-                            <td className="p-3 font-mono text-sm">{student.student_id}</td>
-                            <td className="p-3 font-semibold">{student.name}</td>
-                            <td className="p-3 text-sm">{student.email}</td>
-                            <td className="p-3 text-sm">{student.institute_name}</td>
-                            <td className="p-3 text-center">{student.certificate_count}</td>
-                            <td className="p-3 text-center">{student.verification_count}</td>
+                  <InfoCard>
+                    <div className="table-container">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Student ID</th>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Institute</th>
+                            <th className="text-center">Certificates</th>
+                            <th className="text-center">Verifications</th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
+                        </thead>
+                        <tbody>
+                          {students.map(student => (
+                            <tr key={student.id}>
+                              <td className="font-mono text-sm">{student.student_id}</td>
+                              <td className="font-semibold">{student.name}</td>
+                              <td>{student.email}</td>
+                              <td>{student.institute_name}</td>
+                              <td className="text-center">
+                                <Badge variant="success">{student.certificate_count}</Badge>
+                              </td>
+                              <td className="text-center">
+                                <Badge variant="info">{student.verification_count}</Badge>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </InfoCard>
                 )}
               </div>
             )}
 
             {/* MODULE 5: Manage Verifiers */}
             {activeModule === 'verifiers' && !loading && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-3xl font-bold text-gray-800">Manage Verifiers</h2>
-                  <button
+              <div className="space-y-6">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h2 className="text-2xl font-bold text-secondary-800">Manage Verifiers</h2>
+                    <p className="text-secondary-600 text-sm mt-1">View and manage verification users</p>
+                  </div>
+                  <Button 
                     onClick={() => setShowVerifierForm(true)}
-                    className="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold"
+                    icon="fa-plus"
                   >
-                    + Add Verifier
-                  </button>
+                    Add Verifier
+                  </Button>
                 </div>
 
                 {showVerifierForm && (
-                  <div className="mb-6 bg-gray-50 p-6 rounded-lg border">
-                    <h3 className="font-bold text-lg mb-4">Add New Verifier</h3>
+                  <InfoCard title="Add New Verifier">
                     <form onSubmit={addVerifier} className="space-y-4">
-                      <div>
-                        <label className="block font-semibold mb-2">Username *</label>
-                        <input
-                          type="text"
-                          required
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.username || ''}
-                          onChange={(e) => setFormData({...formData, username: e.target.value})}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block font-medium mb-2">Username *</label>
+                          <input
+                            type="text"
+                            required
+                            className="w-full"
+                            value={formData.username || ''}
+                            onChange={(e) => setFormData({...formData, username: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-2">Email *</label>
+                          <input
+                            type="email"
+                            required
+                            className="w-full"
+                            value={formData.email || ''}
+                            onChange={(e) => setFormData({...formData, email: e.target.value})}
+                          />
+                        </div>
+                        <div>
+                          <label className="block font-medium mb-2">Password *</label>
+                          <input
+                            type="password"
+                            required
+                            minLength="6"
+                            className="w-full"
+                            value={formData.password || ''}
+                            onChange={(e) => setFormData({...formData, password: e.target.value})}
+                          />
+                        </div>
                       </div>
-                      <div>
-                        <label className="block font-semibold mb-2">Email *</label>
-                        <input
-                          type="email"
-                          required
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.email || ''}
-                          onChange={(e) => setFormData({...formData, email: e.target.value})}
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-semibold mb-2">Password *</label>
-                        <input
-                          type="password"
-                          required
-                          minLength="6"
-                          className="w-full px-4 py-2 border rounded-lg"
-                          value={formData.password || ''}
-                          onChange={(e) => setFormData({...formData, password: e.target.value})}
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="submit" className="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                      <div className="flex gap-2 pt-4">
+                        <Button type="submit" variant="success" icon="fa-check">
                           Create Verifier
-                        </button>
-                        <button
-                          type="button"
+                        </Button>
+                        <Button 
+                          type="button" 
+                          variant="secondary"
                           onClick={() => {setShowVerifierForm(false); setFormData({});}}
-                          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600"
                         >
                           Cancel
-                        </button>
+                        </Button>
                       </div>
                     </form>
-                  </div>
+                  </InfoCard>
                 )}
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Username</th>
-                        <th className="p-3 text-left">Company</th>
-                        <th className="p-3 text-left">Email</th>
-                        <th className="p-3 text-center">Type</th>
-                        <th className="p-3 text-center">Verifications</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {verifiers.map(verifier => (
-                        <tr key={verifier.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-semibold">{verifier.username}</td>
-                          <td className="p-3">{verifier.company_name || 'N/A'}</td>
-                          <td className="p-3 text-sm">{verifier.email}</td>
-                          <td className="p-3 text-center text-sm">{verifier.verifier_type}</td>
-                          <td className="p-3 text-center font-semibold">{verifier.verification_count}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              verifier.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {verifier.status}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">
-                            <button 
-                              onClick={() => deleteVerifier(verifier.id)} 
-                              className="text-red-500 hover:text-red-700 font-semibold"
-                            >
-                              Delete
-                            </button>
-                          </td>
+                
+                <InfoCard>
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Username</th>
+                          <th>Company</th>
+                          <th>Email</th>
+                          <th className="text-center">Type</th>
+                          <th className="text-center">Verifications</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-center">Actions</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {verifiers.map(verifier => (
+                          <tr key={verifier.id}>
+                            <td className="font-semibold">{verifier.username}</td>
+                            <td>{verifier.company_name || 'N/A'}</td>
+                            <td>{verifier.email}</td>
+                            <td className="text-center">
+                              <Badge variant="neutral">{verifier.verifier_type}</Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant="info">{verifier.verification_count}</Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant={verifier.status === 'active' ? 'success' : 'neutral'}>
+                                {verifier.status}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              <Button 
+                                size="sm" 
+                                variant="danger"
+                                onClick={() => deleteVerifier(verifier.id)}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 6: Monitor Verifications */}
             {activeModule === 'verifications' && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Monitor Verifications</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse text-sm">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Verification ID</th>
-                        <th className="p-3 text-left">Verifier</th>
-                        <th className="p-3 text-center">Result</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center">Confidence</th>
-                        <th className="p-3 text-center">Suspicious</th>
-                        <th className="p-3 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {verifications.map(verif => (
-                        <tr key={verif.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-xs">{verif.id.slice(0, 12)}...</td>
-                          <td className="p-3">{verif.verifier_id}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              verif.result ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                              {verif.result ? 'Valid' : 'Invalid'}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">{verif.status}</td>
-                          <td className="p-3 text-center">{verif.confidence_score ? `${(verif.confidence_score * 100).toFixed(1)}%` : 'N/A'}</td>
-                          <td className="p-3 text-center">
-                            {verif.is_suspicious ? '🚨 Yes' : '✅ No'}
-                          </td>
-                          <td className="p-3 text-center">
-                            {!verif.is_suspicious && (
-                              <button 
-                                onClick={() => flagVerification(verif.id)} 
-                                className="text-orange-500 hover:text-orange-700 font-semibold"
-                              >
-                                Flag
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Monitor Verifications</h2>
+                  <p className="text-secondary-600 text-sm mt-1">Track all verification activities across the system</p>
                 </div>
+                
+                <InfoCard>
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Verification ID</th>
+                          <th>Verifier</th>
+                          <th className="text-center">Result</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-center">Confidence</th>
+                          <th className="text-center">Suspicious</th>
+                          <th className="text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {verifications.map(verif => (
+                          <tr key={verif.id}>
+                            <td className="font-mono text-xs">{verif.id.slice(0, 12)}...</td>
+                            <td>{verif.verifier_id}</td>
+                            <td className="text-center">
+                              <Badge variant={verif.result ? 'success' : 'danger'}>
+                                {verif.result ? 'Valid' : 'Invalid'}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant="info">{verif.status}</Badge>
+                            </td>
+                            <td className="text-center">
+                              <span className="font-semibold">
+                                {verif.confidence_score ? `${(verif.confidence_score * 100).toFixed(1)}%` : 'N/A'}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              {verif.is_suspicious ? (
+                                <Badge variant="warning">
+                                  <i className="fas fa-exclamation-triangle mr-1"></i> Yes
+                                </Badge>
+                              ) : (
+                                <Badge variant="success">No</Badge>
+                              )}
+                            </td>
+                            <td className="text-center">
+                              {!verif.is_suspicious && (
+                                <Button 
+                                  size="sm" 
+                                  variant="warning"
+                                  onClick={() => flagVerification(verif.id)}
+                                >
+                                  Flag
+                                </Button>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 7: Generate Reports */}
             {activeModule === 'reports' && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">AI-Powered Reports</h2>
-                <p className="text-gray-600 mb-6">Generate comprehensive reports with AI insights and visual analytics</p>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-blue-50 p-6 rounded-lg border border-blue-200">
-                    <h3 className="font-bold text-lg mb-2">📊 Institute Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">AI-powered analysis of institute performance with student and certificate metrics</p>
-                    <button 
-                      onClick={() => generateReport('institute')}
-                      className="bg-blue-500 text-white px-6 py-2 rounded-lg w-full hover:bg-blue-600 transition"
-                    >
-                      Generate AI Report
-                    </button>
-                  </div>
-                  
-                  <div className="bg-green-50 p-6 rounded-lg border border-green-200">
-                    <h3 className="font-bold text-lg mb-2">📜 Certificate Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Detailed certificate analytics with AI insights on issuance patterns and status</p>
-                    <button 
-                      onClick={() => generateReport('certificates')}
-                      className="bg-green-500 text-white px-6 py-2 rounded-lg w-full hover:bg-green-600 transition"
-                    >
-                      Generate AI Report
-                    </button>
-                  </div>
-                  
-                  <div className="bg-purple-50 p-6 rounded-lg border border-purple-200">
-                    <h3 className="font-bold text-lg mb-2">✅ Verification Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">AI analysis of verification success rates and security patterns</p>
-                    <button 
-                      onClick={() => generateReport('verifications')}
-                      className="bg-purple-500 text-white px-6 py-2 rounded-lg w-full hover:bg-purple-600 transition"
-                    >
-                      Generate AI Report
-                    </button>
-                  </div>
-                  
-                  <div className="bg-orange-50 p-6 rounded-lg border border-orange-200">
-                    <h3 className="font-bold text-lg mb-2">📈 System Activity Report</h3>
-                    <p className="text-sm text-gray-600 mb-4">Complete system overview with AI-powered performance insights</p>
-                    <button 
-                      onClick={() => generateReport('system')}
-                      className="bg-orange-500 text-white px-6 py-2 rounded-lg w-full hover:bg-orange-600 transition"
-                    >
-                      Generate AI Report
-                    </button>
-                  </div>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">AI-Powered Reports</h2>
+                  <p className="text-secondary-600 mt-1">Generate comprehensive reports with AI insights and visual analytics</p>
                 </div>
                 
-                <div className="mt-8 bg-yellow-50 p-6 rounded-lg border border-yellow-200">
-                  <h3 className="font-bold text-lg mb-2">🤖 AI Features</h3>
-                  <ul className="text-sm text-gray-700 space-y-1">
-                    <li>• Executive summaries with key insights</li>
-                    <li>• System health analysis and risk indicators</li>
-                    <li>• Professional charts and visualizations</li>
-                    <li>• Downloadable reports and images</li>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <InfoCard title="Institute Report" className="border-t-4 border-t-blue-500">
+                    <div className="flex flex-col h-full justify-between">
+                      <div>
+                        <div className="w-12 h-12 rounded-lg bg-blue-100 flex items-center justify-center mb-4">
+                          <i className="fas fa-building-columns text-blue-600 text-xl"></i>
+                        </div>
+                        <p className="text-sm text-secondary-600 mb-4">AI-powered analysis of institute performance with student and certificate metrics</p>
+                      </div>
+                      <Button 
+                        onClick={() => generateReport('institute')}
+                        variant="primary"
+                        icon="fa-file-waveform"
+                        className="w-full"
+                      >
+                        Generate Report
+                      </Button>
+                    </div>
+                  </InfoCard>
+                  
+                  <InfoCard title="Certificate Report" className="border-t-4 border-t-green-500">
+                    <div className="flex flex-col h-full justify-between">
+                      <div>
+                        <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center mb-4">
+                          <i className="fas fa-certificate text-green-600 text-xl"></i>
+                        </div>
+                        <p className="text-sm text-secondary-600 mb-4">Detailed certificate analytics with AI insights on issuance patterns and status</p>
+                      </div>
+                      <Button 
+                        onClick={() => generateReport('certificates')}
+                        variant="success"
+                        icon="fa-file-waveform"
+                        className="w-full"
+                      >
+                        Generate Report
+                      </Button>
+                    </div>
+                  </InfoCard>
+                  
+                  <InfoCard title="Verification Report" className="border-t-4 border-t-purple-500">
+                    <div className="flex flex-col h-full justify-between">
+                      <div>
+                        <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mb-4">
+                          <i className="fas fa-check-double text-purple-600 text-xl"></i>
+                        </div>
+                        <p className="text-sm text-secondary-600 mb-4">AI analysis of verification success rates and security patterns</p>
+                      </div>
+                      <Button 
+                        onClick={() => generateReport('verifications')}
+                        variant="primary"
+                        icon="fa-file-waveform"
+                        className="w-full"
+                      >
+                        Generate Report
+                      </Button>
+                    </div>
+                  </InfoCard>
+                  
+                  <InfoCard title="System Activity Report" className="border-t-4 border-t-orange-500">
+                    <div className="flex flex-col h-full justify-between">
+                      <div>
+                        <div className="w-12 h-12 rounded-lg bg-orange-100 flex items-center justify-center mb-4">
+                          <i className="fas fa-chart-line text-orange-600 text-xl"></i>
+                        </div>
+                        <p className="text-sm text-secondary-600 mb-4">Complete system overview with AI-powered performance insights</p>
+                      </div>
+                      <Button 
+                        onClick={() => generateReport('system')}
+                        variant="warning"
+                        icon="fa-file-waveform"
+                        className="w-full"
+                      >
+                        Generate Report
+                      </Button>
+                    </div>
+                  </InfoCard>
+                </div>
+                
+                <InfoCard title="AI Features" icon="fa-robot">
+                  <ul className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-secondary-700">
+                    <li className="flex items-start gap-2">
+                      <i className="fas fa-check-circle text-green-500 mt-0.5"></i>
+                      <span>Executive summaries with key insights</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <i className="fas fa-check-circle text-green-500 mt-0.5"></i>
+                      <span>System health analysis and risk indicators</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <i className="fas fa-check-circle text-green-500 mt-0.5"></i>
+                      <span>Professional charts and visualizations</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <i className="fas fa-check-circle text-green-500 mt-0.5"></i>
+                      <span>Downloadable reports and images</span>
+                    </li>
                   </ul>
-                </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 8: Feedback Management */}
             {activeModule === 'feedback' && !loading && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Feedback Management</h2>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Feedback ID</th>
-                        <th className="p-3 text-left">Verifier</th>
-                        <th className="p-3 text-left">Message</th>
-                        <th className="p-3 text-center">Category</th>
-                        <th className="p-3 text-center">Priority</th>
-                        <th className="p-3 text-center">Status</th>
-                        <th className="p-3 text-center">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {feedbacks.map(fb => (
-                        <tr key={fb.id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-xs">{fb.id.slice(0, 12)}...</td>
-                          <td className="p-3">{fb.verifier_id}</td>
-                          <td className="p-3 text-sm">{fb.message.slice(0, 60)}...</td>
-                          <td className="p-3 text-center text-xs">{fb.category}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              fb.priority === 'high' ? 'bg-red-100 text-red-800' :
-                              fb.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                              'bg-green-100 text-green-800'
-                            }`}>
-                              {fb.priority}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center text-xs">{fb.status}</td>
-                          <td className="p-3 text-center">
-                            {!fb.flagged && (
-                              <button 
-                                onClick={() => flagFeedback(fb.id)} 
-                                className="text-orange-500 hover:text-orange-700 font-semibold"
-                              >
-                                Flag
-                              </button>
-                            )}
-                            {fb.flagged && <span className="text-orange-600">🚩 Flagged</span>}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Feedback Management</h2>
+                  <p className="text-secondary-600 text-sm mt-1">Review and manage feedback from verifiers</p>
                 </div>
+                
+                <InfoCard>
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Feedback ID</th>
+                          <th>Verifier</th>
+                          <th>Message</th>
+                          <th className="text-center">Category</th>
+                          <th className="text-center">Priority</th>
+                          <th className="text-center">Status</th>
+                          <th className="text-center">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {feedbacks.map(fb => (
+                          <tr key={fb.id}>
+                            <td className="font-mono text-xs">{fb.id.slice(0, 12)}...</td>
+                            <td>{fb.verifier_id}</td>
+                            <td>
+                              <span className="text-sm" title={fb.message}>
+                                {fb.message.length > 50 ? fb.message.substring(0, 50) + '...' : fb.message}
+                              </span>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant="neutral">{fb.category}</Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant={fb.priority === 'high' ? 'danger' : fb.priority === 'medium' ? 'warning' : 'success'}>
+                                {fb.priority}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant={fb.status === 'resolved' ? 'success' : 'info'}>
+                                {fb.status}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              {!fb.flagged ? (
+                                <Button 
+                                  size="sm" 
+                                  variant="warning"
+                                  onClick={() => flagFeedback(fb.id)}
+                                >
+                                  Flag
+                                </Button>
+                              ) : (
+                                <Badge variant="warning">
+                                  <i className="fas fa-flag mr-1"></i> Flagged
+                                </Badge>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </InfoCard>
               </div>
             )}
-          </div>
         </div>
-      </div>
-      
+      </Layout>
+
       {/* Report Dialog */}
       <ReportDialog
         isOpen={showReportDialog}
@@ -861,13 +986,13 @@ const AdminDashboard = () => {
         reportType={reportType}
         loading={reportLoading}
       />
-      
+
       {/* AI Assistant Widget */}
-      <AIAssistantWidget 
-        role="Admin" 
-        apiEndpoint="/admin/ai-query" 
+      <AIAssistantWidget
+        role="Admin"
+        apiEndpoint="/admin/ai-query"
       />
-    </div>
+    </>
   );
 };
 

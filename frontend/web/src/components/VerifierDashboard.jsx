@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import Layout from './Layout';
+import { StatCard, InfoCard, Button, Badge } from './UIComponents';
 
 const API_URL = 'http://localhost:8000';
 
@@ -10,7 +12,13 @@ const VerifierDashboard = () => {
   const [history, setHistory] = useState([]);
   const [feedbacks, setFeedbacks] = useState([]);
   const [chatMessages, setChatMessages] = useState([
-    { role: 'bot', content: 'Hello! I\'m your verification assistant. I can help you with:\n• Your verification statistics\n• Verification history\n• Certificate verification process\n• System information\n\nWhat would you like to know?' }
+    { role: 'bot', content: `Hello! I'm your verification assistant. I can help you with:
+• Your verification statistics
+• Verification history
+• Certificate verification process
+• System information
+
+What would you like to know?` }
   ]);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -151,159 +159,159 @@ const VerifierDashboard = () => {
     window.location.href = '/';
   };
 
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'verify', label: 'Verify Certificate' },
+    { id: 'history', label: 'History' },
+    { id: 'feedback', label: 'Feedback' },
+    { id: 'chatbot', label: 'Chatbot' }
+  ];
+
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Navigation */}
-      <nav className="bg-green-600 text-white shadow-lg">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold">🔍 CertiSense Verifier</h1>
-            <p className="text-sm text-green-200">Certificate Verification Platform</p>
-          </div>
-          <button onClick={handleLogout} className="bg-red-500 hover:bg-red-600 px-6 py-2 rounded-lg font-semibold transition">
-            Logout
-          </button>
-        </div>
-      </nav>
-
-      <div className="container mx-auto mt-6 px-4">
-        <div className="flex gap-6">
-          {/* Sidebar */}
-          <div className="w-64 bg-white rounded-lg shadow-lg p-4 h-fit">
-            <h2 className="font-bold text-lg mb-4 text-gray-700">Verifier Modules</h2>
-            <ul className="space-y-2">
-              {[
-                { id: 'dashboard', label: '📊 Dashboard' },
-                { id: 'verify', label: '✅ Verify Certificate' },
-                { id: 'history', label: '📜 History' },
-                { id: 'feedback', label: '💬 Feedback' },
-                { id: 'chatbot', label: '🤖 Chatbot' }
-              ].map(mod => (
-                <li key={mod.id}>
-                  <button
-                    onClick={() => setActiveModule(mod.id)}
-                    className={`w-full text-left px-4 py-3 rounded-lg transition ${
-                      activeModule === mod.id ? 'bg-green-500 text-white shadow-md' : 'hover:bg-gray-100 text-gray-700'
-                    }`}
-                  >
-                    {mod.label}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          {/* Main Content */}
-          <div className="flex-1 bg-white rounded-lg shadow-lg p-6">
+    <>
+      <Layout
+        title="CertiSense Verifier"
+        subtitle="Certificate Verification Platform"
+        userRole="Verifier"
+        onLogout={handleLogout}
+        navigationItems={navigationItems}
+        activeModule={activeModule}
+        onModuleChange={setActiveModule}
+        themeColor="green"
+      >
+        <div className="space-y-6">
             {/* MODULE 1: Dashboard */}
             {activeModule === 'dashboard' && dashboardStats && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verifier Dashboard</h2>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Verifier Dashboard</h2>
+                  <p className="text-secondary-600 mt-1">Your verification statistics and performance metrics</p>
+                </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                  <div className="bg-gradient-to-br from-green-400 to-green-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Total Verifications</h3>
-                    <p className="text-4xl font-bold">{dashboardStats.statistics.total_verifications}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-400 to-blue-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Valid Certificates</h3>
-                    <p className="text-4xl font-bold">{dashboardStats.statistics.valid_certificates}</p>
-                  </div>
-                  <div className="bg-gradient-to-br from-purple-400 to-purple-600 text-white p-6 rounded-lg shadow">
-                    <h3 className="text-sm font-semibold mb-2">Success Rate</h3>
-                    <p className="text-4xl font-bold">{dashboardStats.success_rate.toFixed(1)}%</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <StatCard 
+                    title="Total Verifications"
+                    value={dashboardStats.statistics.total_verifications}
+                    icon="fa-check-double"
+                    color="green"
+                  />
+                  <StatCard 
+                    title="Valid Certificates"
+                    value={dashboardStats.statistics.valid_certificates}
+                    icon="fa-certificate"
+                    color="blue"
+                  />
+                  <StatCard 
+                    title="Success Rate"
+                    value={`${dashboardStats.success_rate.toFixed(1)}%`}
+                    icon="fa-chart-line"
+                    color="purple"
+                  />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-                    <h3 className="font-bold mb-2">Invalid Certificates</h3>
-                    <p className="text-2xl font-bold text-red-600">{dashboardStats.statistics.invalid_certificates}</p>
-                  </div>
-                  <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
-                    <h3 className="font-bold mb-2">Tampered Certificates</h3>
-                    <p className="text-2xl font-bold text-orange-600">{dashboardStats.statistics.tampered_certificates}</p>
-                  </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <InfoCard title="Invalid Certificates" className="border-t-4 border-t-red-500">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-3xl font-bold text-red-600">{dashboardStats.statistics.invalid_certificates}</p>
+                        <p className="text-sm text-secondary-600 mt-2">Failed verification</p>
+                      </div>
+                      <i className="fas fa-times-circle text-4xl text-red-300"></i>
+                    </div>
+                  </InfoCard>
+                  
+                  <InfoCard title="Tampered Certificates" className="border-t-4 border-t-orange-500">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-3xl font-bold text-orange-600">{dashboardStats.statistics.tampered_certificates}</p>
+                        <p className="text-sm text-secondary-600 mt-2">Detected alterations</p>
+                      </div>
+                      <i className="fas fa-exclamation-triangle text-4xl text-orange-300"></i>
+                    </div>
+                  </InfoCard>
                 </div>
               </div>
             )}
 
             {/* MODULE 2: Verify Certificate */}
             {activeModule === 'verify' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verify Certificate</h2>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Verify Certificate</h2>
+                  <p className="text-secondary-600 mt-1">Upload a certificate to verify its authenticity</p>
+                </div>
                 
-                <form onSubmit={handleVerifyCertificate} className="space-y-6">
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                    <input
-                      type="file"
-                      name="certificate"
-                      accept=".pdf,.jpg,.jpeg,.png"
-                      className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
-                      required
-                    />
-                    <p className="mt-2 text-sm text-gray-500">Upload certificate (PDF, JPG, PNG)</p>
-                  </div>
+                <InfoCard>
+                  <form onSubmit={handleVerifyCertificate} className="space-y-6">
+                    <div className="border-2 border-dashed border-secondary-300 rounded-lg p-8 text-center">
+                      <i className="fas fa-cloud-upload-alt text-5xl text-secondary-400 mb-4"></i>
+                      <input
+                        type="file"
+                        name="certificate"
+                        accept=".pdf,.jpg,.jpeg,.png"
+                        className="block w-full text-sm text-secondary-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
+                        required
+                      />
+                      <p className="mt-2 text-sm text-secondary-600">Upload certificate (PDF, JPG, PNG)</p>
+                    </div>
 
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className={`w-full py-3 rounded-lg font-semibold text-white transition ${
-                      loading ? 'bg-gray-400' : 'bg-green-600 hover:bg-green-700'
-                    }`}
-                  >
-                    {loading ? 'Verifying...' : 'Verify Certificate'}
-                  </button>
-                </form>
+                    <Button
+                      type="submit"
+                      variant="success"
+                      size="lg"
+                      disabled={loading}
+                      icon={loading ? 'fa-spinner fa-spin' : 'fa-check-circle'}
+                      className="w-full"
+                    >
+                      {loading ? 'Verifying...' : 'Verify Certificate'}
+                    </Button>
+                  </form>
+                </InfoCard>
 
                 {verificationResult && (
-                  <div className="mt-6 bg-gray-50 p-6 rounded-lg border">
-                    <h3 className="font-bold text-lg mb-4">Verification Result</h3>
-                    <div className="space-y-3">
+                  <InfoCard title="Verification Result" icon="fa-clipboard-check">
+                    <div className="space-y-4">
                       <div className="flex items-center gap-3">
                         <strong>Status:</strong>
-                        <span className={`px-4 py-2 rounded-lg font-semibold ${
-                          verificationResult.status === 'valid' ? 'bg-green-100 text-green-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
+                        <Badge variant={verificationResult.status === 'valid' ? 'success' : 'danger'}>
                           {verificationResult.status === 'valid' ? '✅ VALID CERTIFICATE' : '❌ INVALID CERTIFICATE'}
-                        </span>
+                        </Badge>
                       </div>
                       
                       {verificationResult.status === 'valid' && (
-                        <div className="bg-white p-4 rounded-lg border border-green-200">
+                        <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                           <h4 className="font-semibold mb-3 text-green-800">Certificate Details</h4>
-                          <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                             <div>
-                              <p className="text-gray-600">Certificate ID:</p>
+                              <p className="text-secondary-600">Certificate ID:</p>
                               <p className="font-mono font-semibold">{verificationResult.certificate_id}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Certificate Name:</p>
+                              <p className="text-secondary-600">Certificate Name:</p>
                               <p className="font-semibold">{verificationResult.certificate_name}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Student Name:</p>
+                              <p className="text-secondary-600">Student Name:</p>
                               <p className="font-semibold">{verificationResult.student_name}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Student ID:</p>
+                              <p className="text-secondary-600">Student ID:</p>
                               <p className="font-mono">{verificationResult.student_id}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Institute:</p>
+                              <p className="text-secondary-600">Institute:</p>
                               <p className="font-semibold">{verificationResult.institute_name}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Institute ID:</p>
+                              <p className="text-secondary-600">Institute ID:</p>
                               <p className="font-mono">{verificationResult.institute_id}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Issue Date:</p>
+                              <p className="text-secondary-600">Issue Date:</p>
                               <p>{verificationResult.issue_date ? new Date(verificationResult.issue_date).toLocaleDateString() : 'N/A'}</p>
                             </div>
                             <div>
-                              <p className="text-gray-600">Verification Count:</p>
+                              <p className="text-secondary-600">Verification Count:</p>
                               <p className="font-semibold">{verificationResult.verification_count}</p>
                             </div>
                           </div>
@@ -315,8 +323,17 @@ const VerifierDashboard = () => {
                         <p className="font-mono text-xs break-all">{verificationResult.certificate_hash}</p>
                       </div>
                       
-                      <p><strong>Confidence Score:</strong> {(verificationResult.confidence_score * 100).toFixed(1)}%</p>
-                      <p><strong>Blockchain Verified:</strong> {verificationResult.blockchain_verified ? '✅ Yes' : '❌ No'}</p>
+                      <div className="flex items-center gap-2">
+                        <strong>Confidence Score:</strong>
+                        <Badge variant="info">{(verificationResult.confidence_score * 100).toFixed(1)}%</Badge>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <strong>Blockchain Verified:</strong>
+                        <Badge variant={verificationResult.blockchain_verified ? 'success' : 'danger'}>
+                          {verificationResult.blockchain_verified ? '✅ Yes' : '❌ No'}
+                        </Badge>
+                      </div>
                       
                       {verificationResult.explanation && (
                         <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
@@ -333,167 +350,179 @@ const VerifierDashboard = () => {
                         </div>
                       )}
                     </div>
-                  </div>
+                  </InfoCard>
                 )}
               </div>
             )}
 
             {/* MODULE 3: Verification History */}
             {activeModule === 'history' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Verification History</h2>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-200">
-                        <th className="p-3 text-left">Verification ID</th>
-                        <th className="p-3 text-left">Certificate Hash</th>
-                        <th className="p-3 text-center">Result</th>
-                        <th className="p-3 text-center">Confidence</th>
-                        <th className="p-3 text-left">Timestamp</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {history.map(h => (
-                        <tr key={h.verification_id} className="border-b hover:bg-gray-50">
-                          <td className="p-3 font-mono text-xs">{h.verification_id.slice(0, 12)}...</td>
-                          <td className="p-3 font-mono text-xs">{h.certificate_hash}</td>
-                          <td className="p-3 text-center">
-                            <span className={`px-2 py-1 rounded text-xs ${
-                              h.verification_result === 'valid' ? 'bg-green-100 text-green-800' :
-                              h.verification_result === 'invalid' ? 'bg-red-100 text-red-800' :
-                              'bg-orange-100 text-orange-800'
-                            }`}>
-                              {h.verification_result}
-                            </span>
-                          </td>
-                          <td className="p-3 text-center">{(h.confidence_score * 100).toFixed(1)}%</td>
-                          <td className="p-3 text-sm">{new Date(h.timestamp).toLocaleString()}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Verification History</h2>
+                  <p className="text-secondary-600 mt-1">View all your past verification activities</p>
                 </div>
+                
+                <InfoCard>
+                  <div className="table-container">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Verification ID</th>
+                          <th>Certificate Hash</th>
+                          <th className="text-center">Result</th>
+                          <th className="text-center">Confidence</th>
+                          <th>Timestamp</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {history.map(h => (
+                          <tr key={h.verification_id}>
+                            <td className="font-mono text-xs">{h.verification_id.slice(0, 12)}...</td>
+                            <td className="font-mono text-xs">{h.certificate_hash}</td>
+                            <td className="text-center">
+                              <Badge variant={h.verification_result === 'valid' ? 'success' : h.verification_result === 'invalid' ? 'danger' : 'warning'}>
+                                {h.verification_result}
+                              </Badge>
+                            </td>
+                            <td className="text-center">
+                              <Badge variant="info">{(h.confidence_score * 100).toFixed(1)}%</Badge>
+                            </td>
+                            <td className="text-sm">
+                              {new Date(h.timestamp).toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 4: Submit Feedback */}
             {activeModule === 'feedback' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">Submit Feedback</h2>
-                
-                <form onSubmit={submitFeedback} className="space-y-4 mb-8">
-                  <div>
-                    <label className="block font-semibold mb-2">Feedback Type</label>
-                    <select name="type" className="w-full px-4 py-2 border rounded-lg" required>
-                      <option value="suspicious">Suspicious Certificate</option>
-                      <option value="issue">Verification Issue</option>
-                      <option value="general">General Feedback</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-2">Priority</label>
-                    <select name="priority" className="w-full px-4 py-2 border rounded-lg">
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block font-semibold mb-2">Message</label>
-                    <textarea
-                      name="message"
-                      rows="4"
-                      className="w-full px-4 py-2 border rounded-lg"
-                      placeholder="Describe your feedback..."
-                      required
-                    ></textarea>
-                  </div>
-
-                  <button type="submit" className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700">
-                    Submit Feedback
-                  </button>
-                </form>
-
-                <h3 className="font-bold text-xl mb-4">My Feedback</h3>
-                <div className="space-y-3">
-                  {feedbacks.map(fb => (
-                    <div key={fb.id} className="bg-gray-50 p-4 rounded-lg border">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-semibold">{fb.feedback_type}</p>
-                          <p className="text-sm text-gray-600">{fb.message}</p>
-                        </div>
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          fb.priority === 'high' ? 'bg-red-100 text-red-800' :
-                          fb.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                        }`}>
-                          {fb.priority}
-                        </span>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">{new Date(fb.timestamp).toLocaleString()}</p>
-                    </div>
-                  ))}
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">Submit Feedback</h2>
+                  <p className="text-secondary-600 mt-1">Share your feedback or report issues</p>
                 </div>
+                
+                <InfoCard title="New Feedback">
+                  <form onSubmit={submitFeedback} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-medium mb-2">Feedback Type</label>
+                        <select name="type" className="w-full" required>
+                          <option value="suspicious">Suspicious Certificate</option>
+                          <option value="issue">Verification Issue</option>
+                          <option value="general">General Feedback</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block font-medium mb-2">Priority</label>
+                        <select name="priority" className="w-full">
+                          <option value="low">Low</option>
+                          <option value="medium">Medium</option>
+                          <option value="high">High</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-medium mb-2">Message</label>
+                      <textarea
+                        name="message"
+                        rows="4"
+                        className="w-full"
+                        placeholder="Describe your feedback..."
+                        required
+                      ></textarea>
+                    </div>
+
+                    <Button type="submit" variant="success" icon="fa-paper-plane">
+                      Submit Feedback
+                    </Button>
+                  </form>
+                </InfoCard>
+
+                <InfoCard title="My Feedback">
+                  <div className="space-y-3">
+                    {feedbacks.map(fb => (
+                      <div key={fb.id} className="border rounded-lg p-4 hover:bg-secondary-50">
+                        <div className="flex justify-between items-start">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-2">
+                              <Badge variant="info">{fb.feedback_type}</Badge>
+                              <Badge variant={fb.priority === 'high' ? 'danger' : fb.priority === 'medium' ? 'warning' : 'success'}>
+                                {fb.priority}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-secondary-700">{fb.message}</p>
+                          </div>
+                        </div>
+                        <p className="text-xs text-secondary-500 mt-2">{new Date(fb.timestamp).toLocaleString()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </InfoCard>
               </div>
             )}
 
             {/* MODULE 5: Verification Assistant Chatbot */}
             {activeModule === 'chatbot' && (
-              <div>
-                <h2 className="text-3xl font-bold mb-6 text-gray-800">🤖 Verification Assistant</h2>
-                <p className="text-gray-600 mb-4">Ask me about your verification statistics, certificates, and activity.</p>
+              <div className="space-y-6">
+                <div>
+                  <h2 className="text-2xl font-bold text-secondary-800">🤖 Verification Assistant</h2>
+                  <p className="text-secondary-600 mt-1">Ask me about your verification statistics, certificates, and activity</p>
+                </div>
                 
-                <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto mb-4 border border-gray-200">
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                      <div className={`inline-block max-w-[80%] px-4 py-3 rounded-lg shadow-sm ${
-                        msg.role === 'user' 
-                          ? 'bg-green-500 text-white rounded-br-none' 
-                          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-                      }`}>
-                        <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
+                <InfoCard>
+                  <div className="bg-secondary-50 rounded-lg p-4 h-[500px] overflow-y-auto mb-4 border border-secondary-200">
+                    {chatMessages.map((msg, idx) => (
+                      <div key={idx} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                        <div className={`inline-block max-w-[80%] px-4 py-3 rounded-lg shadow-sm ${
+                          msg.role === 'user' 
+                            ? 'bg-green-500 text-white rounded-br-none' 
+                            : 'bg-white text-secondary-800 border border-secondary-200 rounded-bl-none'
+                        }`}>
+                          <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    placeholder="Ask: 'Show my statistics' or 'How many valid certificates?'"
-                  />
-                  <button
-                    onClick={sendChatMessage}
-                    className="bg-green-600 text-white px-8 py-3 rounded-lg hover:bg-green-700 font-semibold transition"
-                  >
-                    Send
-                  </button>
-                </div>
-                
-                <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
-                  <p className="text-sm text-blue-800 font-semibold mb-2">💡 Try asking:</p>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <button onClick={() => setChatInput('Show my statistics')} className="text-left text-blue-600 hover:underline">• Show my statistics</button>
-                    <button onClick={() => setChatInput('How many valid certificates?')} className="text-left text-blue-600 hover:underline">• How many valid certificates?</button>
-                    <button onClick={() => setChatInput('Recent activity')} className="text-left text-blue-600 hover:underline">• Recent activity</button>
-                    <button onClick={() => setChatInput('Show certificate hashes')} className="text-left text-blue-600 hover:underline">• Show certificate hashes</button>
+                    ))}
                   </div>
-                </div>
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+                      className="flex-1"
+                      placeholder="Ask: 'Show my statistics' or 'How many valid certificates?'"
+                    />
+                    <Button onClick={sendChatMessage} variant="success" icon="fa-paper-plane">
+                      Send
+                    </Button>
+                  </div>
+                  
+                  <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                    <p className="text-sm text-blue-800 font-semibold mb-2">💡 Try asking:</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <button onClick={() => setChatInput('Show my statistics')} className="text-left text-blue-600 hover:underline">• Show my statistics</button>
+                      <button onClick={() => setChatInput('How many valid certificates?')} className="text-left text-blue-600 hover:underline">• How many valid certificates?</button>
+                      <button onClick={() => setChatInput('Recent activity')} className="text-left text-blue-600 hover:underline">• Recent activity</button>
+                      <button onClick={() => setChatInput('Show certificate hashes')} className="text-left text-blue-600 hover:underline">• Show certificate hashes</button>
+                    </div>
+                  </div>
+                </InfoCard>
               </div>
             )}
-          </div>
         </div>
-      </div>
-    </div>
+      </Layout>
+
+    </>
   );
 };
 

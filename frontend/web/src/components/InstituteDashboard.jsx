@@ -1,57 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
+import Layout from './Layout';
+import { StatCard, InfoCard, Button, Badge } from './UIComponents';
+
+const API_URL = 'http://localhost:8000';
 
 const InstituteDashboard = () => {
-  const { user, token, logout } = useAuth();
+  const { token, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [students, setStudents] = useState([]);
   const [dashboard, setDashboard] = useState(null);
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [newStudent, setNewStudent] = useState({ name: '', email: '', password: '' });
+  const [showAddStudent, setShowAddStudent] = useState(false);
   const [certificateFile, setCertificateFile] = useState(null);
   const [selectedStudent, setSelectedStudent] = useState('');
   const [profileImage, setProfileImage] = useState(null);
   const [editingProfile, setEditingProfile] = useState(false);
   const [editingStudent, setEditingStudent] = useState(null);
+  const [editStudentData, setEditStudentData] = useState({});
   const [chatMessages, setChatMessages] = useState([
     { role: 'bot', content: 'Hello! I\'m your institute assistant. Ask me about students, certificates, or recent activity.' }
   ]);
   const [chatInput, setChatInput] = useState('');
 
-  const apiCall = async (endpoint, method = 'GET', body = null) => {
-    try {
-      const options = {
-        method,
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          ...(body && { 'Content-Type': 'application/json' })
-        },
-        ...(body && { body: JSON.stringify(body) })
-      };
+  const headers = { Authorization: `Bearer ${token}` };
 
-      console.log(`Making API call to: ${endpoint}`);
-      console.log(`Headers:`, options.headers);
-      
-      const response = await fetch(`http://localhost:8000${endpoint}`, options);
-      
-      console.log(`Response status: ${response.status}`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`API Error: ${response.status} - ${errorText}`);
-        throw new Error(`API Error: ${response.status} - ${errorText}`);
-      }
-      
-      const data = await response.json();
-      console.log(`Response data:`, data);
-      return data;
-    } catch (error) {
-      console.error(`API call failed for ${endpoint}:`, error);
-      throw error;
+  const apiCall = async (endpoint, method = 'GET', body = null) => {
+    const options = {
+      method,
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        ...(body && { 'Content-Type': 'application/json' })
+      },
+      ...(body && { body: JSON.stringify(body) })
+    };
+    const response = await fetch(`${API_URL}${endpoint}`, options);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`API Error: ${response.status} - ${errorText}`);
     }
+    return response.json();
   };
+
+  const navigationItems = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'students', label: 'Students' },
+    { id: 'certificates', label: 'Certificates' },
+    { id: 'profile', label: 'Profile' },
+    { id: 'chatbot', label: 'AI Assistant' },
+  ];
 
   useEffect(() => {
     loadDashboard();
@@ -61,26 +61,20 @@ const InstituteDashboard = () => {
 
   const loadDashboard = async () => {
     try {
-      console.log('Loading dashboard...');
       const data = await apiCall('/institute/dashboard');
       setDashboard(data);
-      console.log('Dashboard loaded successfully:', data);
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      alert(`Failed to load dashboard: ${error.message}`);
     }
   };
 
   const loadStudents = async () => {
     setLoading(true);
     try {
-      console.log('Loading students...');
       const data = await apiCall('/institute/students');
       setStudents(data.students || []);
-      console.log('Students loaded successfully:', data.students?.length || 0);
     } catch (error) {
       console.error('Error loading students:', error);
-      alert(`Failed to load students: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -88,13 +82,10 @@ const InstituteDashboard = () => {
 
   const loadProfile = async () => {
     try {
-      console.log('Loading profile...');
       const data = await apiCall('/institute/profile');
       setProfile(data);
-      console.log('Profile loaded successfully:', data);
     } catch (error) {
       console.error('Error loading profile:', error);
-      alert(`Failed to load profile: ${error.message}`);
     }
   };
 
@@ -105,21 +96,18 @@ const InstituteDashboard = () => {
       formData.append('name', newStudent.name);
       formData.append('email', newStudent.email);
       formData.append('password', newStudent.password);
-
-      const response = await fetch(`http://localhost:8000/institute/students`, {
+      const response = await fetch(`${API_URL}/institute/students`, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
+        headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-
       const result = await response.json();
       if (response.ok) {
         setNewStudent({ name: '', email: '', password: '' });
+        setShowAddStudent(false);
         loadStudents();
         loadDashboard();
-        alert(`Student added successfully! Student ID: ${result.student_id}`);
+        alert(`Student added! Student ID: ${result.student_id}`);
       } else {
         alert(result.detail || 'Error adding student');
       }
@@ -128,23 +116,20 @@ const InstituteDashboard = () => {
     }
   };
 
-  const handleEditStudent = async (studentId, updatedData) => {
+  const handleEditStudent = async (studentId) => {
     try {
-      const response = await fetch(`http://localhost:8000/institute/students/${studentId}?name=${encodeURIComponent(updatedData.name)}&email=${encodeURIComponent(updatedData.email)}`, {
-        method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
+      const response = await fetch(
+        `${API_URL}/institute/students/${studentId}?name=${encodeURIComponent(editStudentData.name)}&email=${encodeURIComponent(editStudentData.email)}`,
+        { method: 'PUT', headers: { 'Authorization': `Bearer ${token}` } }
+      );
       if (response.ok) {
         loadStudents();
         setEditingStudent(null);
-        alert('Student updated successfully');
+        setEditStudentData({});
       } else {
         alert('Error updating student');
       }
-    } catch (error) {
+    } catch {
       alert('Error updating student');
     }
   };
@@ -155,62 +140,41 @@ const InstituteDashboard = () => {
       alert('Please select a student and certificate file');
       return;
     }
-
     const formData = new FormData();
     formData.append('file', certificateFile);
-
     try {
-      console.log('Issuing certificate...');
-      console.log('Student ID:', selectedStudent);
-      console.log('File:', certificateFile.name);
-      
-      const response = await fetch(`http://localhost:8000/institute/certificates?student_id=${encodeURIComponent(selectedStudent)}`, {
-        method: 'POST',
-        headers: { 'Authorization': `Bearer ${token}` },
-        body: formData
-      });
-
-      console.log('Response status:', response.status);
-      
+      const response = await fetch(
+        `${API_URL}/institute/certificates?student_id=${encodeURIComponent(selectedStudent)}`,
+        { method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData }
+      );
       if (response.ok) {
         const result = await response.json();
-        console.log('Certificate issued successfully:', result);
         setCertificateFile(null);
         setSelectedStudent('');
         loadDashboard();
-        alert(`Certificate issued successfully!\nCertificate ID: ${result.certificate_id}\nHash: ${result.hash.substring(0, 16)}...`);
+        alert(`Certificate issued!\nID: ${result.certificate_id}\nHash: ${result.hash.substring(0, 16)}...`);
       } else {
         const errorData = await response.json().catch(() => ({ detail: 'Unknown error' }));
-        console.error('Certificate issuance failed:', errorData);
-        alert(`Error issuing certificate: ${errorData.detail || 'Unknown error'}`);
+        alert(`Error: ${errorData.detail || 'Unknown error'}`);
       }
     } catch (error) {
-      console.error('Certificate issuance error:', error);
-      alert(`Error issuing certificate: ${error.message}`);
+      alert(`Error: ${error.message}`);
     }
   };
 
   const sendChatMessage = async () => {
     if (!chatInput.trim()) return;
-
     const userMessage = { role: 'user', content: chatInput };
-    setChatMessages([...chatMessages, userMessage]);
+    setChatMessages(prev => [...prev, userMessage]);
     setChatInput('');
-
     try {
-      const res = await axios.get(
-        `http://localhost:8000/institute/ai-query`,
-        { 
-          params: { query: chatInput },
-          headers: { 'Authorization': `Bearer ${token}` }
-        }
-      );
-      const botMessage = { role: 'bot', content: res.data.response };
-      setChatMessages([...chatMessages, userMessage, botMessage]);
-    } catch (err) {
-      console.error('Chat error:', err);
-      const errorMessage = { role: 'bot', content: 'Sorry, I encountered an error. Please try again.' };
-      setChatMessages([...chatMessages, userMessage, errorMessage]);
+      const res = await axios.get(`${API_URL}/institute/ai-query`, {
+        params: { query: chatInput },
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      setChatMessages(prev => [...prev, { role: 'bot', content: res.data.response }]);
+    } catch {
+      setChatMessages(prev => [...prev, { role: 'bot', content: 'Sorry, I encountered an error. Please try again.' }]);
     }
   };
 
@@ -220,446 +184,505 @@ const InstituteDashboard = () => {
     formData.append('institute_name', profile.institute_name);
     formData.append('institute_id', profile.institute_id);
     formData.append('email', profile.email);
-    formData.append('location', profile.location);
+    formData.append('location', profile.location || '');
     formData.append('description', profile.description || '');
-    if (profileImage) {
-      formData.append('image', profileImage);
-    }
-
+    if (profileImage) formData.append('image', profileImage);
     try {
-      const response = await fetch('http://localhost:8000/institute/profile', {
+      const response = await fetch(`${API_URL}/institute/profile`, {
         method: 'PUT',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData
       });
-
       if (response.ok) {
         loadProfile();
         setEditingProfile(false);
         setProfileImage(null);
         alert('Profile updated successfully');
       }
-    } catch (error) {
+    } catch {
       alert('Error updating profile');
     }
   };
 
+  // ─── RENDER: DASHBOARD ───────────────────────────────────────────────────────
   const renderDashboard = () => (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Institute Dashboard</h3>
-      
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <h4 className="font-medium text-blue-900">Total Students</h4>
-          <p className="text-3xl font-bold text-blue-600">{dashboard?.total_students || 0}</p>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <h4 className="font-medium text-green-900">Certificates Issued</h4>
-          <p className="text-3xl font-bold text-green-600">{dashboard?.total_certificates || 0}</p>
-        </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <h4 className="font-medium text-purple-900">Verifications</h4>
-          <p className="text-3xl font-bold text-purple-600">{dashboard?.total_verifications || 0}</p>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-2xl font-bold text-secondary-800 mb-1">Institute Overview</h2>
+        <p className="text-secondary-600">Summary of your students, certificates and verifications</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <StatCard
+          title="Total Students"
+          value={dashboard?.total_students ?? 0}
+          icon="fa-user-graduate"
+          color="blue"
+        />
+        <StatCard
+          title="Certificates Issued"
+          value={dashboard?.total_certificates ?? 0}
+          icon="fa-certificate"
+          color="green"
+        />
+        <StatCard
+          title="Total Verifications"
+          value={dashboard?.total_verifications ?? 0}
+          icon="fa-check-double"
+          color="purple"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <InfoCard title="Quick Actions">
+          <div className="space-y-3">
+            <Button icon="fa-user-plus" onClick={() => { setActiveTab('students'); setShowAddStudent(true); }} className="w-full justify-center">
+              Add New Student
+            </Button>
+            <Button icon="fa-file-certificate" variant="success" onClick={() => setActiveTab('certificates')} className="w-full justify-center">
+              Issue Certificate
+            </Button>
+            <Button icon="fa-robot" variant="secondary" onClick={() => setActiveTab('chatbot')} className="w-full justify-center">
+              Ask AI Assistant
+            </Button>
+          </div>
+        </InfoCard>
+
+        <InfoCard title="Institute Info">
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 p-3 bg-secondary-50 rounded-lg">
+              <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <i className="fas fa-building-columns text-purple-600"></i>
+              </div>
+              <div>
+                <p className="text-xs text-secondary-500">Institute Name</p>
+                <p className="font-semibold text-secondary-800">{profile?.institute_name || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-secondary-50 rounded-lg">
+              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <i className="fas fa-id-badge text-blue-600"></i>
+              </div>
+              <div>
+                <p className="text-xs text-secondary-500">Institute ID</p>
+                <p className="font-mono font-semibold text-secondary-800">{profile?.institute_id || '—'}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 p-3 bg-secondary-50 rounded-lg">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <i className="fas fa-location-dot text-green-600"></i>
+              </div>
+              <div>
+                <p className="text-xs text-secondary-500">Location</p>
+                <p className="font-semibold text-secondary-800">{profile?.location || 'Not specified'}</p>
+              </div>
+            </div>
+          </div>
+        </InfoCard>
       </div>
     </div>
   );
 
+  // ─── RENDER: STUDENTS ────────────────────────────────────────────────────────
+  const renderStudents = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-2xl font-bold text-secondary-800">Manage Students</h2>
+          <p className="text-secondary-600 text-sm mt-1">Add and manage students in your institute</p>
+        </div>
+        <Button icon="fa-user-plus" onClick={() => setShowAddStudent(!showAddStudent)}>
+          Add Student
+        </Button>
+      </div>
+
+      {showAddStudent && (
+        <InfoCard title="Add New Student">
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+            <i className="fas fa-info-circle mr-2"></i>
+            Student ID auto-generated as <span className="font-mono font-semibold">[{profile?.institute_id || 'INST'}-00001]</span>
+          </div>
+          <form onSubmit={handleAddStudent} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block font-medium mb-1">Full Name *</label>
+                <input
+                  type="text"
+                  value={newStudent.name}
+                  onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
+                  className="w-full"
+                  placeholder="e.g. John Doe"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Email *</label>
+                <input
+                  type="email"
+                  value={newStudent.email}
+                  onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
+                  className="w-full"
+                  placeholder="student@email.com"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block font-medium mb-1">Password *</label>
+                <input
+                  type="password"
+                  value={newStudent.password}
+                  onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
+                  className="w-full"
+                  placeholder="Min 6 characters"
+                  required
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button type="submit" variant="success" icon="fa-check">Create Student</Button>
+              <Button type="button" variant="secondary" onClick={() => setShowAddStudent(false)}>Cancel</Button>
+            </div>
+          </form>
+        </InfoCard>
+      )}
+
+      <InfoCard title={`Students (${students.length})`}>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="loading-spinner mx-auto mb-4"></div>
+            <p className="text-secondary-600">Loading students...</p>
+          </div>
+        ) : students.length === 0 ? (
+          <div className="text-center py-12 text-secondary-500">
+            <i className="fas fa-users text-4xl mb-3 block opacity-30"></i>
+            No students added yet
+          </div>
+        ) : (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Student ID</th>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th className="text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map(student => (
+                  <tr key={student.id}>
+                    {editingStudent === student.id ? (
+                      <>
+                        <td><span className="font-mono text-xs">{student.student_id}</span></td>
+                        <td>
+                          <input
+                            type="text"
+                            value={editStudentData.name}
+                            onChange={(e) => setEditStudentData({ ...editStudentData, name: e.target.value })}
+                            className="w-full px-2 py-1 border rounded text-sm"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="email"
+                            value={editStudentData.email}
+                            onChange={(e) => setEditStudentData({ ...editStudentData, email: e.target.value })}
+                            className="w-full px-2 py-1 border rounded text-sm"
+                          />
+                        </td>
+                        <td className="text-center">
+                          <div className="flex gap-2 justify-center">
+                            <Button size="sm" variant="success" icon="fa-check" onClick={() => handleEditStudent(student.id)}>Save</Button>
+                            <Button size="sm" variant="secondary" onClick={() => setEditingStudent(null)}>Cancel</Button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td><span className="font-mono text-xs bg-secondary-100 px-2 py-1 rounded">{student.student_id}</span></td>
+                        <td className="font-semibold">{student.name}</td>
+                        <td className="text-secondary-600">{student.email}</td>
+                        <td className="text-center">
+                          <Button
+                            size="sm"
+                            icon="fa-pen"
+                            onClick={() => { setEditingStudent(student.id); setEditStudentData({ name: student.name, email: student.email }); }}
+                          >
+                            Edit
+                          </Button>
+                        </td>
+                      </>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </InfoCard>
+    </div>
+  );
+
+  // ─── RENDER: CERTIFICATES ────────────────────────────────────────────────────
+  const renderCertificates = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold text-secondary-800">Issue Certificates</h2>
+        <p className="text-secondary-600 text-sm mt-1">Upload and issue certificates to your students on the blockchain</p>
+      </div>
+
+      <InfoCard title="Issue New Certificate">
+        <form onSubmit={handleIssueCertificate} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block font-medium mb-2">Select Student *</label>
+              <select
+                value={selectedStudent}
+                onChange={(e) => setSelectedStudent(e.target.value)}
+                className="w-full px-3 py-2 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+                required
+              >
+                <option value="">Choose a student...</option>
+                {students.map(student => (
+                  <option key={student.id} value={student.student_id}>
+                    {student.name} — {student.student_id}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block font-medium mb-2">Certificate File *</label>
+              <input
+                type="file"
+                accept=".pdf,.jpg,.png"
+                onChange={(e) => setCertificateFile(e.target.files[0])}
+                className="w-full px-3 py-2 border border-secondary-200 rounded-lg text-sm"
+                required
+              />
+              <p className="text-xs text-secondary-500 mt-1">Supported: PDF, JPG, PNG</p>
+            </div>
+          </div>
+
+          {selectedStudent && certificateFile && (
+            <div className="p-3 bg-green-50 border border-green-200 rounded-lg text-sm text-green-800">
+              <i className="fas fa-check-circle mr-2"></i>
+              Ready to issue certificate for <strong>{students.find(s => s.student_id === selectedStudent)?.name}</strong> — file: <strong>{certificateFile.name}</strong>
+            </div>
+          )}
+
+          <Button type="submit" variant="success" icon="fa-file-certificate">
+            Issue Certificate on Blockchain
+          </Button>
+        </form>
+      </InfoCard>
+
+      <InfoCard title="How It Works">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { step: '1', icon: 'fa-upload', title: 'Upload', desc: 'Select the student and upload the certificate file', color: 'blue' },
+            { step: '2', icon: 'fa-link', title: 'Blockchain', desc: 'Certificate hash is stored immutably on the blockchain', color: 'purple' },
+            { step: '3', icon: 'fa-shield-check', title: 'Verify', desc: 'Anyone can verify the certificate using its ID or hash', color: 'green' },
+          ].map(({ step, icon, title, desc, color }) => (
+            <div key={step} className={`p-4 bg-${color}-50 rounded-lg text-center`}>
+              <div className={`w-10 h-10 rounded-full bg-${color}-100 flex items-center justify-center mx-auto mb-2`}>
+                <i className={`fas ${icon} text-${color}-600`}></i>
+              </div>
+              <p className="font-semibold text-secondary-800">{title}</p>
+              <p className="text-xs text-secondary-600 mt-1">{desc}</p>
+            </div>
+          ))}
+        </div>
+      </InfoCard>
+    </div>
+  );
+
+  // ─── RENDER: PROFILE ─────────────────────────────────────────────────────────
   const renderProfile = () => (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Institute Profile</h3>
-        <button
+        <div>
+          <h2 className="text-2xl font-bold text-secondary-800">Institute Profile</h2>
+          <p className="text-secondary-600 text-sm mt-1">View and manage your institute information</p>
+        </div>
+        <Button
+          icon={editingProfile ? 'fa-times' : 'fa-pen'}
+          variant={editingProfile ? 'secondary' : 'primary'}
           onClick={() => setEditingProfile(!editingProfile)}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           {editingProfile ? 'Cancel' : 'Edit Profile'}
-        </button>
+        </Button>
       </div>
 
       {profile && (
-        <div className="bg-white border rounded-lg p-6">
+        <InfoCard>
           {!editingProfile ? (
-            <div className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
+            <div className="space-y-6">
+              <div className="flex items-center gap-5">
+                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
                   {profile.image ? (
                     <img src={profile.image} alt="Institute" className="w-20 h-20 rounded-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-gray-600">{profile.institute_name?.charAt(0)}</span>
+                    <span className="text-3xl font-bold text-purple-600">{profile.institute_name?.charAt(0)}</span>
                   )}
                 </div>
                 <div>
-                  <h4 className="text-xl font-semibold">{profile.institute_name}</h4>
-                  <p className="text-gray-600">Institute ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{profile.institute_id}</span></p>
+                  <h3 className="text-xl font-bold text-secondary-800">{profile.institute_name}</h3>
+                  <span className="font-mono text-sm bg-secondary-100 px-2 py-1 rounded text-secondary-600">{profile.institute_id}</span>
+                  <Badge variant="success" className="ml-2">Approved</Badge>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <p className="mt-1 text-sm text-gray-900">{profile.email}</p>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
-                  <p className="mt-1 text-sm text-gray-900">{profile.location || 'Not specified'}</p>
-                </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {[
+                  { label: 'Email', value: profile.email, icon: 'fa-envelope' },
+                  { label: 'Location', value: profile.location || 'Not specified', icon: 'fa-location-dot' },
+                ].map(({ label, value, icon }) => (
+                  <div key={label} className="p-4 bg-secondary-50 rounded-lg">
+                    <div className="flex items-center gap-2 mb-1">
+                      <i className={`fas ${icon} text-secondary-400 text-sm`}></i>
+                      <p className="text-xs font-medium text-secondary-500 uppercase tracking-wide">{label}</p>
+                    </div>
+                    <p className="text-secondary-800 font-medium">{value}</p>
+                  </div>
+                ))}
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <p className="mt-1 text-sm text-gray-900">{profile.description || 'No description provided'}</p>
+
+              <div className="p-4 bg-secondary-50 rounded-lg">
+                <div className="flex items-center gap-2 mb-1">
+                  <i className="fas fa-align-left text-secondary-400 text-sm"></i>
+                  <p className="text-xs font-medium text-secondary-500 uppercase tracking-wide">Description</p>
+                </div>
+                <p className="text-secondary-800">{profile.description || 'No description provided'}</p>
               </div>
             </div>
           ) : (
             <form onSubmit={handleUpdateProfile} className="space-y-4">
-              <div className="flex items-center space-x-4">
-                <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-4">
+                <div className="w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center shrink-0">
                   {profileImage ? (
                     <img src={URL.createObjectURL(profileImage)} alt="Preview" className="w-20 h-20 rounded-full object-cover" />
                   ) : profile.image ? (
                     <img src={profile.image} alt="Institute" className="w-20 h-20 rounded-full object-cover" />
                   ) : (
-                    <span className="text-2xl font-bold text-gray-600">{profile.institute_name?.charAt(0)}</span>
+                    <span className="text-3xl font-bold text-purple-600">{profile.institute_name?.charAt(0)}</span>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Profile Image</label>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setProfileImage(e.target.files[0])}
-                    className="mt-1 text-sm"
-                  />
+                  <label className="block text-sm font-medium text-secondary-700 mb-1">Profile Image</label>
+                  <input type="file" accept="image/*" onChange={(e) => setProfileImage(e.target.files[0])} className="text-sm" />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Institute Name</label>
-                  <input
-                    type="text"
-                    value={profile.institute_name}
-                    onChange={(e) => setProfile({...profile, institute_name: e.target.value})}
-                    className="mt-1 w-full px-3 py-2 border rounded-md"
-                    required
-                  />
+                  <label className="block font-medium mb-1">Institute Name *</label>
+                  <input type="text" value={profile.institute_name} onChange={(e) => setProfile({ ...profile, institute_name: e.target.value })} className="w-full" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Institute ID</label>
-                  <input
-                    type="text"
-                    value={profile.institute_id}
-                    onChange={(e) => setProfile({...profile, institute_id: e.target.value})}
-                    className="mt-1 w-full px-3 py-2 border rounded-md font-mono"
-                    placeholder="e.g., MIT, HARVARD, STANFORD"
-                    required
-                  />
-                  <p className="text-xs text-gray-500 mt-1">This ID will be used for student ID generation: {profile.institute_id}-00001</p>
+                  <label className="block font-medium mb-1">Institute ID *</label>
+                  <input type="text" value={profile.institute_id} onChange={(e) => setProfile({ ...profile, institute_id: e.target.value })} className="w-full font-mono" required />
+                  <p className="text-xs text-secondary-500 mt-1">Used for student IDs: {profile.institute_id}-00001</p>
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Email *</label>
+                  <input type="email" value={profile.email} onChange={(e) => setProfile({ ...profile, email: e.target.value })} className="w-full" required />
+                </div>
+                <div>
+                  <label className="block font-medium mb-1">Location</label>
+                  <input type="text" value={profile.location || ''} onChange={(e) => setProfile({ ...profile, location: e.target.value })} className="w-full" placeholder="City, Country" />
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    value={profile.email}
-                    onChange={(e) => setProfile({...profile, email: e.target.value})}
-                    className="mt-1 w-full px-3 py-2 border rounded-md"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Location</label>
-                  <input
-                    type="text"
-                    value={profile.location || ''}
-                    onChange={(e) => setProfile({...profile, location: e.target.value})}
-                    className="mt-1 w-full px-3 py-2 border rounded-md"
-                    placeholder="City, Country"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700">Description</label>
-                <textarea
-                  value={profile.description || ''}
-                  onChange={(e) => setProfile({...profile, description: e.target.value})}
-                  rows={3}
-                  className="mt-1 w-full px-3 py-2 border rounded-md"
-                  placeholder="Brief description about your institute..."
-                />
+                <label className="block font-medium mb-1">Description</label>
+                <textarea value={profile.description || ''} onChange={(e) => setProfile({ ...profile, description: e.target.value })} rows={3} className="w-full px-3 py-2 border border-secondary-200 rounded-lg" placeholder="Brief description about your institute..." />
               </div>
-
-              <div className="flex space-x-3">
-                <button type="submit" className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-                  Save Changes
-                </button>
-                <button type="button" onClick={() => setEditingProfile(false)} className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
-                  Cancel
-                </button>
+              <div className="flex gap-2 pt-2">
+                <Button type="submit" variant="success" icon="fa-check">Save Changes</Button>
+                <Button type="button" variant="secondary" onClick={() => setEditingProfile(false)}>Cancel</Button>
               </div>
             </form>
           )}
-        </div>
+        </InfoCard>
       )}
     </div>
   );
 
-  const renderStudents = () => (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Manage Students</h3>
-      
-      <form onSubmit={handleAddStudent} className="bg-gray-50 p-4 rounded-lg space-y-3">
-        <h4 className="font-medium">Add New Student</h4>
-        <div className="bg-blue-50 p-3 rounded text-sm text-blue-800">
-          <strong>Note:</strong> Student ID will be auto-generated as [{profile?.institute_id || 'INSTITUTEID'}-00001] format
-        </div>
-        <input
-          type="text"
-          value={newStudent.name}
-          onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })}
-          placeholder="Full Name"
-          className="w-full px-3 py-2 border rounded-md"
-          required
-        />
-        <input
-          type="email"
-          value={newStudent.email}
-          onChange={(e) => setNewStudent({ ...newStudent, email: e.target.value })}
-          placeholder="Email"
-          className="w-full px-3 py-2 border rounded-md"
-          required
-        />
-        <input
-          type="password"
-          value={newStudent.password}
-          onChange={(e) => setNewStudent({ ...newStudent, password: e.target.value })}
-          placeholder="Password"
-          className="w-full px-3 py-2 border rounded-md"
-          required
-        />
-        <button type="submit" className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-          Add Student (Auto-Generate ID)
-        </button>
-      </form>
-
-      <div className="space-y-3">
-        <h4 className="font-medium">Students List</h4>
-        {loading ? (
-          <div className="text-center py-8">Loading...</div>
-        ) : students.length === 0 ? (
-          <div className="text-center py-8 text-gray-600">No students added yet</div>
-        ) : (
-          <div className="space-y-2">
-            {students.map(student => (
-              <div key={student.id} className="border p-3 rounded-lg">
-                {editingStudent === student.id ? (
-                  <div className="space-y-3">
-                    <div className="bg-yellow-50 p-2 rounded text-sm text-yellow-800">
-                      <strong>Note:</strong> Student ID cannot be changed: <span className="font-mono">{student.student_id}</span>
-                    </div>
-                    <input
-                      type="text"
-                      defaultValue={student.name}
-                      placeholder="Full Name"
-                      className="w-full px-3 py-2 border rounded-md"
-                      id={`name-${student.id}`}
-                    />
-                    <input
-                      type="email"
-                      defaultValue={student.email}
-                      placeholder="Email"
-                      className="w-full px-3 py-2 border rounded-md"
-                      id={`email-${student.id}`}
-                    />
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEditStudent(student.id, {
-                          name: document.getElementById(`name-${student.id}`).value,
-                          email: document.getElementById(`email-${student.id}`).value
-                        })}
-                        className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                      >
-                        Save
-                      </button>
-                      <button
-                        onClick={() => setEditingStudent(null)}
-                        className="px-3 py-1 bg-gray-500 text-white rounded hover:bg-gray-600 text-sm"
-                      >
-                        Cancel
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{student.name}</p>
-                      <p className="text-sm text-gray-600">ID: <span className="font-mono bg-gray-100 px-2 py-1 rounded">{student.student_id}</span></p>
-                      <p className="text-sm text-gray-600">Email: {student.email}</p>
-                    </div>
-                    <button
-                      onClick={() => setEditingStudent(student.id)}
-                      className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-sm"
-                    >
-                      Edit
-                    </button>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-
-  const renderCertificates = () => (
-    <div className="space-y-6">
-      <h3 className="text-lg font-semibold">Issue Certificates</h3>
-      
-      <form onSubmit={handleIssueCertificate} className="bg-gray-50 p-4 rounded-lg space-y-3">
-        <div>
-          <label className="block text-sm font-medium mb-2">Select Student</label>
-          <select
-            value={selectedStudent}
-            onChange={(e) => setSelectedStudent(e.target.value)}
-            className="w-full px-3 py-2 border rounded-md"
-            required
-          >
-            <option value="">Choose a student...</option>
-            {students.map(student => (
-              <option key={student.id} value={student.student_id}>
-                {student.name} ({student.student_id})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-2">Certificate File</label>
-          <input
-            type="file"
-            accept=".pdf,.jpg,.png"
-            onChange={(e) => setCertificateFile(e.target.files[0])}
-            className="w-full px-3 py-2 border rounded-md"
-            required
-          />
-        </div>
-
-        <button type="submit" className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
-          Issue Certificate
-        </button>
-      </form>
-    </div>
-  );
-
+  // ─── RENDER: CHATBOT ─────────────────────────────────────────────────────────
   const renderChatbot = () => (
     <div className="space-y-6">
-      <h3 className="text-lg font-semibold">🤖 Institute Assistant</h3>
-      <p className="text-gray-600 text-sm">Ask me about your students, certificates, and institute statistics.</p>
-      
-      <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto mb-4 border border-gray-200">
-        {chatMessages.map((msg, idx) => (
-          <div key={idx} className={`mb-4 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-            <div className={`inline-block max-w-[80%] px-4 py-3 rounded-lg shadow-sm ${
-              msg.role === 'user' 
-                ? 'bg-blue-500 text-white rounded-br-none' 
-                : 'bg-white text-gray-800 border border-gray-200 rounded-bl-none'
-            }`}>
-              <pre className="whitespace-pre-wrap font-sans text-sm">{msg.content}</pre>
-            </div>
-          </div>
-        ))}
+      <div>
+        <h2 className="text-2xl font-bold text-secondary-800">AI Assistant</h2>
+        <p className="text-secondary-600 text-sm mt-1">Ask about your students, certificates, and institute statistics</p>
       </div>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={chatInput}
-          onChange={(e) => setChatInput(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
-          className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Ask: 'Show statistics' or 'How many students?'"
-        />
-        <button
-          onClick={sendChatMessage}
-          className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold transition"
-        >
-          Send
-        </button>
-      </div>
-      
-      <div className="mt-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <p className="text-sm text-blue-800 font-semibold mb-2">💡 Try asking:</p>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <button onClick={() => setChatInput('Show my statistics')} className="text-left text-blue-600 hover:underline">• Show my statistics</button>
-          <button onClick={() => setChatInput('How many students?')} className="text-left text-blue-600 hover:underline">• How many students?</button>
-          <button onClick={() => setChatInput('Certificate information')} className="text-left text-blue-600 hover:underline">• Certificate information</button>
-          <button onClick={() => setChatInput('Recent activity')} className="text-left text-blue-600 hover:underline">• Recent activity</button>
+      <InfoCard>
+        <div className="h-[420px] overflow-y-auto mb-4 space-y-3 pr-1">
+          {chatMessages.map((msg, idx) => (
+            <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+              {msg.role === 'bot' && (
+                <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center mr-2 shrink-0 mt-1">
+                  <i className="fas fa-robot text-purple-600 text-xs"></i>
+                </div>
+              )}
+              <div className={`max-w-[78%] px-4 py-3 rounded-xl shadow-sm text-sm ${
+                msg.role === 'user'
+                  ? 'bg-purple-600 text-white rounded-br-none'
+                  : 'bg-secondary-50 border border-secondary-200 text-secondary-800 rounded-bl-none'
+              }`}>
+                <pre className="whitespace-pre-wrap font-sans">{msg.content}</pre>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendChatMessage()}
+            className="flex-1 px-4 py-2 border border-secondary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
+            placeholder="Ask: 'How many students?' or 'Show statistics'"
+          />
+          <Button icon="fa-paper-plane" onClick={sendChatMessage}>Send</Button>
+        </div>
+      </InfoCard>
+
+      <InfoCard title="Suggested Questions">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          {['Show my statistics', 'How many students?', 'Certificate information', 'Recent activity'].map(q => (
+            <button
+              key={q}
+              onClick={() => setChatInput(q)}
+              className="text-left px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 text-sm rounded-lg transition border border-purple-200"
+            >
+              <i className="fas fa-comment-dots mr-1"></i> {q}
+            </button>
+          ))}
+        </div>
+      </InfoCard>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <h1 className="text-xl font-semibold">Institute Dashboard</h1>
-            </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-600">Institute Admin</span>
-              <button onClick={logout} className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600">
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      <div className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="flex space-x-8">
-          <div className="w-64">
-            <nav className="space-y-1">
-              {[
-                { key: 'dashboard', label: 'Dashboard' },
-                { key: 'profile', label: 'Profile' },
-                { key: 'students', label: 'Manage Students' },
-                { key: 'certificates', label: 'Issue Certificates' },
-                { key: 'chatbot', label: '🤖 Assistant' }
-              ].map(tab => (
-                <button
-                  key={tab.key}
-                  onClick={() => setActiveTab(tab.key)}
-                  className={`w-full text-left px-3 py-2 rounded-md text-sm font-medium ${
-                    activeTab === tab.key
-                      ? 'bg-blue-100 text-blue-700'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          <div className="flex-1">
-            <div className="bg-white shadow rounded-lg p-6">
-              {activeTab === 'dashboard' && renderDashboard()}
-              {activeTab === 'profile' && renderProfile()}
-              {activeTab === 'students' && renderStudents()}
-              {activeTab === 'certificates' && renderCertificates()}
-              {activeTab === 'chatbot' && renderChatbot()}
-            </div>
-          </div>
-        </div>
+    <Layout
+      title="Institute Dashboard"
+      subtitle="Certificate Management System"
+      userRole={profile?.institute_name || 'Institute Admin'}
+      onLogout={logout}
+      navigationItems={navigationItems}
+      activeTab={activeTab}
+      onModuleChange={setActiveTab}
+      themeColor="purple"
+    >
+      <div className="space-y-6">
+        {activeTab === 'dashboard'    && renderDashboard()}
+        {activeTab === 'students'     && renderStudents()}
+        {activeTab === 'certificates' && renderCertificates()}
+        {activeTab === 'profile'      && renderProfile()}
+        {activeTab === 'chatbot'      && renderChatbot()}
       </div>
-    </div>
+    </Layout>
   );
 };
 
