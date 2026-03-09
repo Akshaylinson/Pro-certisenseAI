@@ -280,5 +280,4 @@ npm run dev
 
 ---
 
-**CertiSense AI v3.0 - Built with React, FastAPI, AI Validation, and Blockchain Technology**#   P r o - c e r t i s e n s e A I  
- 
+**CertiSense AI v3.0 - Built with React, FastAPI, AI Validation, and Blockchain Technology**#
