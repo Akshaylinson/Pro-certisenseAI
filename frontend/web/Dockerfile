@@ -5,10 +5,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
-COPY . .
-
-ARG VITE_API_URL
+# Declare build arg BEFORE copying source so it overrides .env
+ARG VITE_API_URL=http://localhost:8000
 ENV VITE_API_URL=$VITE_API_URL
+
+COPY . .
 
 EXPOSE 5173
 
