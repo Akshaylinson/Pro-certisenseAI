@@ -49,6 +49,8 @@ data/*.db
 .env.local
 .env.*.local
 *.env
+.env.server
+.env.localhost
 
 # Node.js / React / Vite
 node_modules/
