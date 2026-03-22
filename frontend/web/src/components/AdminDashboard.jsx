@@ -28,6 +28,10 @@ const AdminDashboard = () => {
   // Institute search & filter state
   const [instituteSearch, setInstituteSearch] = useState('');
   const [instituteStatusFilter, setInstituteStatusFilter] = useState('all');
+
+  // Verifier search & filter state
+  const [verifierSearch, setVerifierSearch] = useState('');
+  const [verifierStatusFilter, setVerifierStatusFilter] = useState('all');
   
   // Report dialog state
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -812,6 +816,27 @@ const AdminDashboard = () => {
                 )}
                 
                 <InfoCard>
+                  <div className="flex gap-3 mb-4 items-center">
+                    <div className="relative" style={{flex: '1 1 0%'}}>
+                      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 text-sm"></i>
+                      <input
+                        type="text"
+                        placeholder="Search by username, email or company..."
+                        className="w-full pl-9 pr-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        value={verifierSearch}
+                        onChange={e => setVerifierSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="border border-secondary-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-36 flex-shrink-0"
+                      value={verifierStatusFilter}
+                      onChange={e => setVerifierStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                    </select>
+                  </div>
                   <div className="table-container">
                     <table>
                       <thead>
@@ -826,7 +851,17 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {verifiers.map(verifier => (
+                        {verifiers
+                          .filter(verifier => {
+                            const q = verifierSearch.toLowerCase();
+                            const matchSearch = !q ||
+                              verifier.username?.toLowerCase().includes(q) ||
+                              verifier.email?.toLowerCase().includes(q) ||
+                              verifier.company_name?.toLowerCase().includes(q);
+                            const matchStatus = verifierStatusFilter === 'all' || verifier.status === verifierStatusFilter;
+                            return matchSearch && matchStatus;
+                          })
+                          .map(verifier => (
                           <tr key={verifier.id}>
                             <td className="font-semibold">
                               {editingVerifier === verifier.id
