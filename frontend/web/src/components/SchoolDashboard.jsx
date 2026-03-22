@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import API_URL from '../config/api';
 
 const InstituteDashboard = () => {
   const { user, token, logout } = useAuth();
@@ -21,7 +22,7 @@ const InstituteDashboard = () => {
       ...(body && { body: JSON.stringify(body) })
     };
 
-    const response = await fetch(`http://localhost:8000${endpoint}`, options);
+    const response = await fetch(`${API_URL}${endpoint}`, options);
     return response.json();
   };
 
@@ -54,7 +55,7 @@ const InstituteDashboard = () => {
   const handleAddStudent = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:8000/institute/students', {
+      const response = await fetch(`${API_URL}/institute/students`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -86,7 +87,7 @@ const InstituteDashboard = () => {
     formData.append('student_id', selectedStudent);
 
     try {
-      const response = await fetch('http://localhost:8000/institute/certificates', {
+      const response = await fetch(`${API_URL}/institute/certificates`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` },
         body: formData

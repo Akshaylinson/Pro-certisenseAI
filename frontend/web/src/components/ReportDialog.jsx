@@ -1,4 +1,5 @@
 import React from 'react';
+import API_URL from '../config/api';
 
 const ReportDialog = ({ isOpen, onClose, reportData, reportType, loading }) => {
   if (!isOpen) return null;
@@ -23,7 +24,7 @@ const ReportDialog = ({ isOpen, onClose, reportData, reportType, loading }) => {
   const downloadChart = () => {
     if (reportData?.chart_url) {
       const link = document.createElement('a');
-      link.href = `http://localhost:8000${reportData.chart_url}`;
+      link.href = `${API_URL}${reportData.chart_url}`;
       link.download = `${reportType}_report_${new Date().toISOString().split('T')[0]}.png`;
       link.click();
     }
@@ -98,7 +99,7 @@ const ReportDialog = ({ isOpen, onClose, reportData, reportType, loading }) => {
                   </div>
                   <div className="bg-white p-4 rounded-lg border shadow-sm">
                     <img
-                      src={`http://localhost:8000${reportData.chart_url}`}
+                      src={`${API_URL}${reportData.chart_url}`}
                       alt={`${reportType} report chart`}
                       className="w-full h-auto rounded-lg"
                       onError={(e) => {

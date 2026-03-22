@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import API_URL from '../config/api';
 
 const ChatbotOverlay = ({ token }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +28,7 @@ const ChatbotOverlay = ({ token }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://localhost:8000/chatbot', {
+      const response = await fetch(`${API_URL}/chatbot`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

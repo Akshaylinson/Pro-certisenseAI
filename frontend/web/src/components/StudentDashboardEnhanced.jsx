@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
-const API_URL = 'http://localhost:8000/api/student';
+import API_URL from '../config/api';
 
 const StudentDashboardEnhanced = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
