@@ -22,6 +22,8 @@ const AdminDashboard = () => {
   const [formData, setFormData] = useState({});
   const [editingInstitute, setEditingInstitute] = useState(null);
   const [editFormData, setEditFormData] = useState({});
+  const [editingVerifier, setEditingVerifier] = useState(null);
+  const [editVerifierData, setEditVerifierData] = useState({});
   
   // Report dialog state
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -164,6 +166,37 @@ const AdminDashboard = () => {
       loadInstitutes();
     } catch (err) {
       alert(err.response?.data?.detail || 'Delete failed');
+    }
+  };
+
+  const startEditVerifier = (v) => {
+    setEditingVerifier(v.id);
+    setEditVerifierData({
+      username: v.username || '',
+      email: v.email || '',
+      company_name: v.company_name || '',
+      verifier_type: v.verifier_type || 'employer',
+      status: v.status || 'active'
+    });
+  };
+
+  const saveEditVerifier = async (id) => {
+    try {
+      await axios.put(`${API_URL}/admin/verifiers/${id}`, null, {
+        params: {
+          username: editVerifierData.username,
+          email: editVerifierData.email,
+          company_name: editVerifierData.company_name,
+          verifier_type: editVerifierData.verifier_type,
+          status: editVerifierData.status
+        },
+        headers
+      });
+      setEditingVerifier(null);
+      setEditVerifierData({});
+      loadVerifiers();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Update failed');
     }
   };
 
@@ -760,28 +793,79 @@ const AdminDashboard = () => {
                       <tbody>
                         {verifiers.map(verifier => (
                           <tr key={verifier.id}>
-                            <td className="font-semibold">{verifier.username}</td>
-                            <td>{verifier.company_name || 'N/A'}</td>
-                            <td>{verifier.email}</td>
+                            <td className="font-semibold">
+                              {editingVerifier === verifier.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editVerifierData.username} onChange={e => setEditVerifierData({...editVerifierData, username: e.target.value})} />
+                                : verifier.username}
+                            </td>
+                            <td>
+                              {editingVerifier === verifier.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editVerifierData.company_name} onChange={e => setEditVerifierData({...editVerifierData, company_name: e.target.value})} />
+                                : verifier.company_name || 'N/A'}
+                            </td>
+                            <td>
+                              {editingVerifier === verifier.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editVerifierData.email} onChange={e => setEditVerifierData({...editVerifierData, email: e.target.value})} />
+                                : verifier.email}
+                            </td>
                             <td className="text-center">
-                              <Badge variant="neutral">{verifier.verifier_type}</Badge>
+                              {editingVerifier === verifier.id
+                                ? <select className="border rounded px-2 py-1 text-sm" value={editVerifierData.verifier_type} onChange={e => setEditVerifierData({...editVerifierData, verifier_type: e.target.value})}>
+                                    <option value="employer">employer</option>
+                                    <option value="organization">organization</option>
+                                    <option value="recruiter">recruiter</option>
+                                  </select>
+                                : <Badge variant="neutral">{verifier.verifier_type}</Badge>}
                             </td>
                             <td className="text-center">
                               <Badge variant="info">{verifier.verification_count}</Badge>
                             </td>
                             <td className="text-center">
-                              <Badge variant={verifier.status === 'active' ? 'success' : 'neutral'}>
-                                {verifier.status}
-                              </Badge>
+                              {editingVerifier === verifier.id
+                                ? <select className="border rounded px-2 py-1 text-sm" value={editVerifierData.status} onChange={e => setEditVerifierData({...editVerifierData, status: e.target.value})}>
+                                    <option value="active">active</option>
+                                    <option value="inactive">inactive</option>
+                                  </select>
+                                : <Badge variant={verifier.status === 'active' ? 'success' : 'neutral'}>{verifier.status}</Badge>}
                             </td>
                             <td className="text-center">
-                              <Button 
-                                size="sm" 
-                                variant="danger"
-                                onClick={() => deleteVerifier(verifier.id)}
-                              >
-                                Delete
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                {editingVerifier === verifier.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => saveEditVerifier(verifier.id)}
+                                      title="Save"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 transition"
+                                    >
+                                      <i className="fas fa-check text-xs"></i>
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingVerifier(null)}
+                                      title="Cancel"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
+                                    >
+                                      <i className="fas fa-times text-xs"></i>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEditVerifier(verifier)}
+                                      title="Edit"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 transition"
+                                    >
+                                      <i className="fas fa-pen text-xs"></i>
+                                    </button>
+                                    <button
+                                      onClick={() => deleteVerifier(verifier.id)}
+                                      title="Delete"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-700 transition"
+                                    >
+                                      <i className="fas fa-trash text-xs"></i>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

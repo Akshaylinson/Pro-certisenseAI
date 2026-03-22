@@ -394,7 +394,10 @@ async def add_verifier(
 @router.put("/verifiers/{verifier_id}")
 async def edit_verifier(
     verifier_id: str,
+    username: str = Query(None),
+    email: str = Query(None),
     company_name: str = Query(None),
+    verifier_type: str = Query(None),
     status: str = Query(None),
     admin=Depends(require_admin_role),
     db: Session = Depends(get_db)
@@ -404,8 +407,20 @@ async def edit_verifier(
     if not verifier:
         raise HTTPException(status_code=404, detail="Verifier not found")
     
-    if company_name:
+    if username:
+        existing = db.query(Verifier).filter(Verifier.username == username, Verifier.id != verifier_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        verifier.username = username
+    if email:
+        existing = db.query(Verifier).filter(Verifier.email == email, Verifier.id != verifier_id).first()
+        if existing:
+            raise HTTPException(status_code=400, detail="Email already registered")
+        verifier.email = email
+    if company_name is not None:
         verifier.company_name = company_name
+    if verifier_type:
+        verifier.verifier_type = verifier_type
     if status:
         verifier.status = status
     
