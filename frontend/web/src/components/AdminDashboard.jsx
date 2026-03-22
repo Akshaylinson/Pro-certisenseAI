@@ -24,6 +24,10 @@ const AdminDashboard = () => {
   const [editFormData, setEditFormData] = useState({});
   const [editingVerifier, setEditingVerifier] = useState(null);
   const [editVerifierData, setEditVerifierData] = useState({});
+
+  // Institute search & filter state
+  const [instituteSearch, setInstituteSearch] = useState('');
+  const [instituteStatusFilter, setInstituteStatusFilter] = useState('all');
   
   // Report dialog state
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -506,6 +510,27 @@ const AdminDashboard = () => {
                 )}
                 
                 <InfoCard>
+                  <div className="flex gap-3 mb-4 items-center">
+                    <div className="relative" style={{flex: '1 1 0%'}}>
+                      <i className="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-secondary-400 text-sm"></i>
+                      <input
+                        type="text"
+                        placeholder="Search by name, email or location..."
+                        className="w-full pl-9 pr-3 py-2 border border-secondary-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+                        value={instituteSearch}
+                        onChange={e => setInstituteSearch(e.target.value)}
+                      />
+                    </div>
+                    <select
+                      className="border border-secondary-200 rounded-lg px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-36 flex-shrink-0"
+                      value={instituteStatusFilter}
+                      onChange={e => setInstituteStatusFilter(e.target.value)}
+                    >
+                      <option value="all">All Statuses</option>
+                      <option value="approved">Approved</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
                   <div className="table-container">
                     <table>
                       <thead>
@@ -521,7 +546,17 @@ const AdminDashboard = () => {
                         </tr>
                       </thead>
                       <tbody>
-                        {institutes.map(inst => (
+                        {institutes
+                          .filter(inst => {
+                            const q = instituteSearch.toLowerCase();
+                            const matchSearch = !q ||
+                              inst.name?.toLowerCase().includes(q) ||
+                              inst.email?.toLowerCase().includes(q) ||
+                              inst.location?.toLowerCase().includes(q);
+                            const matchStatus = instituteStatusFilter === 'all' || inst.approval_status === instituteStatusFilter;
+                            return matchSearch && matchStatus;
+                          })
+                          .map(inst => (
                           <tr key={inst.id}>
                             <td className="font-mono text-xs">{inst.institute_id}</td>
                             <td className="font-semibold">
