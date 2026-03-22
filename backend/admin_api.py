@@ -242,7 +242,8 @@ async def approve_certificate(cert_id: str, admin=Depends(require_admin_role), d
     if not cert:
         raise HTTPException(status_code=404, detail="Certificate not found")
     
-    cert.status = "active"
+    from database import CertificateStatusEnum
+    cert.status = CertificateStatusEnum.ACTIVE
     db.commit()
     log_audit(db, admin["user_id"], "APPROVE", "certificate", cert_id, f"Approved certificate: {cert.name}")
     return {"message": "Certificate approved"}
@@ -496,12 +497,13 @@ async def get_verifications(
 @router.put("/verifications/{verif_id}/flag")
 async def flag_verification(verif_id: str, admin=Depends(require_admin_role), db: Session = Depends(get_db)):
     """Flag suspicious verification"""
+    from database import VerificationStatusEnum
     verif = db.query(Verification).filter(Verification.id == verif_id).first()
     if not verif:
         raise HTTPException(status_code=404, detail="Verification not found")
     
     verif.is_suspicious = True
-    verif.status = "flagged"
+    verif.status = VerificationStatusEnum.FLAGGED
     db.commit()
     log_audit(db, admin["user_id"], "FLAG", "verification", verif_id, "Flagged suspicious verification")
     return {"message": "Verification flagged as suspicious"}
