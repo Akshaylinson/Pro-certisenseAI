@@ -6,7 +6,7 @@ const ROLES = [
   {
     key: 'admin',
     label: 'Admin',
-    icon: '🛡️',
+    icon: 'fa-solid fa-shield-halved',
     color: 'from-purple-600 to-purple-800',
     border: 'border-purple-500',
     desc: 'System administrator managing institutes and platform analytics.',
@@ -15,7 +15,7 @@ const ROLES = [
   {
     key: 'institute',
     label: 'Institute',
-    icon: '🏫',
+    icon: 'fa-solid fa-building-columns',
     color: 'from-blue-600 to-blue-800',
     border: 'border-blue-500',
     desc: 'Educational institutions issuing and managing certificates.',
@@ -24,7 +24,7 @@ const ROLES = [
   {
     key: 'student',
     label: 'Student',
-    icon: '🎓',
+    icon: 'fa-solid fa-user-graduate',
     color: 'from-green-600 to-green-800',
     border: 'border-green-500',
     desc: 'Certificate holders tracking and sharing their credentials.',
@@ -33,7 +33,7 @@ const ROLES = [
   {
     key: 'verifier',
     label: 'Verifier',
-    icon: '🔍',
+    icon: 'fa-solid fa-magnifying-glass',
     color: 'from-orange-600 to-orange-800',
     border: 'border-orange-500',
     desc: 'Employers and organizations verifying certificate authenticity.',
@@ -42,18 +42,18 @@ const ROLES = [
 ];
 
 const FEATURES = [
-  { icon: '⛓️', title: 'Blockchain Secured', desc: 'Every certificate is hashed and stored on an immutable blockchain ledger.' },
-  { icon: '🤖', title: 'AI Validation', desc: 'Machine learning models detect tampered or fraudulent certificates instantly.' },
-  { icon: '⚡', title: 'Instant Verification', desc: 'Upload any certificate and get a verified result in seconds.' },
-  { icon: '🔐', title: 'Role-Based Access', desc: 'Separate secure portals for admins, institutes, students and verifiers.' },
-  { icon: '📊', title: 'Analytics Dashboard', desc: 'Real-time insights on certificates issued, verified and flagged.' },
-  { icon: '🌐', title: 'Globally Accessible', desc: 'Cloud-hosted platform accessible from anywhere in the world.' },
+  { icon: 'fa-solid fa-link', title: 'Blockchain Secured', desc: 'Every certificate is hashed and stored on an immutable blockchain ledger.' },
+  { icon: 'fa-solid fa-robot', title: 'AI Validation', desc: 'Machine learning models detect tampered or fraudulent certificates instantly.' },
+  { icon: 'fa-solid fa-bolt', title: 'Instant Verification', desc: 'Upload any certificate and get a verified result in seconds.' },
+  { icon: 'fa-solid fa-lock', title: 'Role-Based Access', desc: 'Separate secure portals for admins, institutes, students and verifiers.' },
+  { icon: 'fa-solid fa-chart-bar', title: 'Analytics Dashboard', desc: 'Real-time insights on certificates issued, verified and flagged.' },
+  { icon: 'fa-solid fa-globe', title: 'Globally Accessible', desc: 'Cloud-hosted platform accessible from anywhere in the world.' },
 ];
 
 const STEPS = [
-  { step: '01', role: 'Institute', action: 'Registers and uploads student certificates to the blockchain.' },
-  { step: '02', role: 'Student', action: 'Logs in to view, track and share their verified certificates.' },
-  { step: '03', role: 'Verifier', action: 'Uploads a certificate — AI + blockchain confirms authenticity instantly.' },
+  { step: '01', icon: 'fa-solid fa-building-columns', role: 'Institute', action: 'Registers and uploads student certificates to the blockchain.' },
+  { step: '02', icon: 'fa-solid fa-user-graduate', role: 'Student', action: 'Logs in to view, track and share their verified certificates.' },
+  { step: '03', icon: 'fa-solid fa-magnifying-glass', role: 'Verifier', action: 'Uploads a certificate — AI + blockchain confirms authenticity instantly.' },
 ];
 
 function LoginModal({ role, onClose, onSuccess }) {
@@ -123,7 +123,7 @@ function LoginModal({ role, onClose, onSuccess }) {
         <button onClick={onClose} className="absolute top-4 right-4 text-white/60 hover:text-white text-xl">✕</button>
 
         <div className="text-center mb-6">
-          <div className="text-4xl mb-2">{role.icon}</div>
+          <div className="text-4xl mb-2"><i className={`${role.icon} text-white/90`} /></div>
           <h3 className="text-2xl font-bold text-white">{role.label} {isRegister ? 'Register' : 'Login'}</h3>
           <p className="text-white/60 text-sm mt-1">{role.desc}</p>
         </div>
@@ -205,7 +205,7 @@ export default function LandingPage() {
       <nav className="fixed top-0 w-full z-40 bg-gray-950/80 backdrop-blur-md border-b border-white/10">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <span className="text-2xl">🔐</span>
+            <i className="fa-solid fa-shield-halved text-2xl text-blue-400" />
             <span className="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
               CertiSense AI
             </span>
@@ -219,8 +219,8 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <button onClick={() => openModal('verifier')} className="px-4 py-2 text-sm text-white/80 hover:text-white transition">
-              Verify Certificate
+            <button onClick={() => openModal('verifier')} className="inline-flex items-center gap-2 px-4 py-2 text-sm text-white/80 hover:text-white transition">
+              <i className="fa-solid fa-magnifying-glass text-xs" /> Verify Certificate
             </button>
             <button
               onClick={() => openModal('institute')}
@@ -256,7 +256,7 @@ export default function LandingPage() {
         <div className="relative max-w-5xl mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-full text-blue-400 text-sm mb-8">
             <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-            Powered by AI + Blockchain Technology
+            <i className="fa-solid fa-microchip text-xs" /> Powered by AI + Blockchain Technology
           </div>
 
           <h1 className="text-5xl md:text-7xl font-extrabold leading-tight mb-6">
@@ -275,15 +275,15 @@ export default function LandingPage() {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <button
               onClick={() => openModal('verifier')}
-              className="px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-semibold text-lg transition shadow-lg shadow-blue-600/30"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-blue-600 hover:bg-blue-500 rounded-xl font-semibold text-lg transition shadow-lg shadow-blue-600/30"
             >
-              🔍 Verify a Certificate
+              <i className="fa-solid fa-magnifying-glass" /> Verify a Certificate
             </button>
             <button
               onClick={() => openModal('institute')}
-              className="px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-semibold text-lg transition"
+              className="inline-flex items-center gap-3 px-8 py-4 bg-white/10 hover:bg-white/20 border border-white/20 rounded-xl font-semibold text-lg transition"
             >
-              🏫 Register Institute
+              <i className="fa-solid fa-building-columns" /> Register Institute
             </button>
           </div>
 
@@ -311,7 +311,9 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {FEATURES.map((f) => (
               <div key={f.title} className="p-6 bg-white/5 border border-white/10 rounded-2xl hover:bg-white/10 transition">
-                <div className="text-3xl mb-4">{f.icon}</div>
+                <div className="w-12 h-12 rounded-xl bg-white/10 flex items-center justify-center mb-4">
+            <i className={`${f.icon} text-xl text-white`} />
+          </div>
                 <h3 className="text-lg font-semibold mb-2">{f.title}</h3>
                 <p className="text-white/50 text-sm leading-relaxed">{f.desc}</p>
               </div>
@@ -330,7 +332,10 @@ export default function LandingPage() {
           <div className="space-y-6">
             {STEPS.map((s) => (
               <div key={s.step} className="flex items-start gap-6 p-6 bg-white/5 border border-white/10 rounded-2xl">
-                <div className="text-4xl font-black text-white/10 shrink-0 w-16">{s.step}</div>
+                <div className="flex flex-col items-center gap-2 shrink-0 w-16">
+                  <span className="text-3xl font-black text-white/10">{s.step}</span>
+                  <i className={`${s.icon} text-blue-400 text-lg`} />
+                </div>
                 <div>
                   <div className="text-blue-400 font-semibold text-sm mb-1">{s.role}</div>
                   <p className="text-white/70">{s.action}</p>
@@ -355,12 +360,14 @@ export default function LandingPage() {
                 onClick={() => openModal(role.key)}
                 className={`group p-8 bg-gradient-to-br ${role.color} rounded-2xl border ${role.border} hover:scale-105 transition-transform text-left shadow-lg`}
               >
-                <div className="text-4xl mb-4">{role.icon}</div>
+                <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center mb-4">
+                  <i className={`${role.icon} text-2xl text-white`} />
+                </div>
                 <h3 className="text-xl font-bold mb-2">{role.label}</h3>
                 <p className="text-white/70 text-sm leading-relaxed mb-4">{role.desc}</p>
                 <div className="flex items-center gap-2 text-white/80 text-sm font-medium group-hover:gap-3 transition-all">
                   {role.canRegister ? 'Login / Register' : 'Login'}
-                  <span>→</span>
+                  <i className="fa-solid fa-arrow-right text-xs" />
                 </div>
               </button>
             ))}
@@ -372,7 +379,7 @@ export default function LandingPage() {
       <footer className="border-t border-white/10 py-10 px-6">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-white/40 text-sm">
           <div className="flex items-center gap-2">
-            <span>🔐</span>
+            <i className="fa-solid fa-shield-halved text-blue-400" />
             <span className="font-semibold text-white/60">CertiSense AI v3.0</span>
           </div>
           <p>Built with React · FastAPI · AI Validation · Blockchain</p>
