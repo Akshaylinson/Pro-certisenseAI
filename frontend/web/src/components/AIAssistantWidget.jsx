@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import API_URL from '../config/api';
 
 const AIAssistantWidget = ({ role, apiEndpoint }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +47,7 @@ const AIAssistantWidget = ({ role, apiEndpoint }) => {
 
     try {
       const token = localStorage.getItem(`${role.toLowerCase()}_token`);
-      const response = await fetch(`http://localhost:8000${apiEndpoint}`, {
+      const response = await fetch(`${API_URL}${apiEndpoint}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

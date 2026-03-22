@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import API_URL from '../config/api';
 
 const LoginForm = () => {
   const [userType, setUserType] = useState('admin');
@@ -53,7 +54,7 @@ const LoginForm = () => {
         }
       }
 
-      const response = await fetch(`http://localhost:8000${endpoint}`, {
+      const response = await fetch(`${API_URL}${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)

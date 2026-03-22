@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import API_URL from '../config/api';
 
 export default function RegisterForm() {
   const [file, setFile] = useState(null);
@@ -41,7 +42,7 @@ export default function RegisterForm() {
     formData.append('file', file);
     
     try {
-      const response = await fetch('http://localhost:8000/register', {
+      const response = await fetch(`${API_URL}/register`, {
         method: 'POST',
         body: formData
       });

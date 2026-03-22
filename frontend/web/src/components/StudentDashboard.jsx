@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import Layout from './Layout';
 import { StatCard, InfoCard, Button, Badge } from './UIComponents';
+import API_URL from '../config/api';
 
 const StudentDashboard = () => {
   const { user, token, logout } = useAuth();
@@ -23,7 +24,7 @@ const StudentDashboard = () => {
       ...(body && { body: JSON.stringify(body) })
     };
 
-    const response = await fetch(`http://localhost:8000${endpoint}`, options);
+    const response = await fetch(`${API_URL}${endpoint}`, options);
     return response.json();
   };
 
@@ -213,7 +214,7 @@ const StudentDashboard = () => {
                     icon="fa-download"
                     onClick={(e) => {
                       e.preventDefault();
-                      fetch(`http://localhost:8000/student/certificates/${cert.certificate_id}/download`, {
+                      fetch(`${API_URL}/student/certificates/${cert.certificate_id}/download`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                       })
                       .then(response => response.blob())

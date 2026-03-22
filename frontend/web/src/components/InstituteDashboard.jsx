@@ -3,8 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import axios from 'axios';
 import Layout from './Layout';
 import { StatCard, InfoCard, Button, Badge } from './UIComponents';
-
-const API_URL = 'http://localhost:8000';
+import API_URL from '../config/api';
 
 const InstituteDashboard = () => {
   const { token, logout } = useAuth();

@@ -4,8 +4,7 @@ import ReportDialog from './ReportDialog';
 import AIAssistantWidget from './AIAssistantWidget';
 import Layout from './Layout';
 import { StatCard, InfoCard, Button, Badge } from './UIComponents';
-
-const API_URL = 'http://localhost:8000';
+import API_URL from '../config/api';
 
 const AdminDashboard = () => {
   const [activeModule, setActiveModule] = useState('dashboard');
