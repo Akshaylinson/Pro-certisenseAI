@@ -11,7 +11,7 @@ services:
       - ./backend/data:/app/data
     environment:
       - DATABASE_URL=sqlite:///data/certisense.db
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:5173}
+      - ALLOWED_ORIGINS=http://31.97.61.19:5173
     networks:
       - certisense-network
 
@@ -20,7 +20,7 @@ services:
       context: ./frontend/web
       dockerfile: Dockerfile
       args:
-        - VITE_API_URL=${VITE_API_URL:-http://localhost:8000}
+        - VITE_API_URL=http://31.97.61.19:8000
     ports:
       - "5173:5173"
     depends_on:

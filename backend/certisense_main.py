@@ -25,7 +25,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="CertiSense AI - Enhanced Blockchain Certificate System", version="3.0.0")
 
 import os
-ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS", "http://localhost:5173").split(",")
+ALLOWED_ORIGINS = os.getenv("ALLOWED_ORIGINS").split(",")
 
 app.add_middleware(
     CORSMiddleware,
