@@ -20,6 +20,8 @@ const AdminDashboard = () => {
   const [showInstituteForm, setShowInstituteForm] = useState(false);
   const [showVerifierForm, setShowVerifierForm] = useState(false);
   const [formData, setFormData] = useState({});
+  const [editingInstitute, setEditingInstitute] = useState(null);
+  const [editFormData, setEditFormData] = useState({});
   
   // Report dialog state
   const [showReportDialog, setShowReportDialog] = useState(false);
@@ -129,6 +131,29 @@ const AdminDashboard = () => {
       console.error('Feedback error:', err);
     }
     setLoading(false);
+  };
+
+  const startEditInstitute = (inst) => {
+    setEditingInstitute(inst.id);
+    setEditFormData({ name: inst.name, email: inst.email, location: inst.location || '' });
+  };
+
+  const saveEditInstitute = async (id) => {
+    try {
+      await axios.put(`${API_URL}/admin/institutes/${id}`, null, {
+        params: {
+          name: editFormData.name,
+          email: editFormData.email,
+          location: editFormData.location
+        },
+        headers
+      });
+      setEditingInstitute(null);
+      setEditFormData({});
+      loadInstitutes();
+    } catch (err) {
+      alert(err.response?.data?.detail || 'Update failed');
+    }
   };
 
   const deleteInstitute = async (id) => {
@@ -466,9 +491,21 @@ const AdminDashboard = () => {
                         {institutes.map(inst => (
                           <tr key={inst.id}>
                             <td className="font-mono text-xs">{inst.institute_id}</td>
-                            <td className="font-semibold">{inst.name}</td>
-                            <td>{inst.email}</td>
-                            <td>{inst.location || 'N/A'}</td>
+                            <td className="font-semibold">
+                              {editingInstitute === inst.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editFormData.name} onChange={e => setEditFormData({...editFormData, name: e.target.value})} />
+                                : inst.name}
+                            </td>
+                            <td>
+                              {editingInstitute === inst.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editFormData.email} onChange={e => setEditFormData({...editFormData, email: e.target.value})} />
+                                : inst.email}
+                            </td>
+                            <td>
+                              {editingInstitute === inst.id
+                                ? <input className="w-full border rounded px-2 py-1 text-sm" value={editFormData.location} onChange={e => setEditFormData({...editFormData, location: e.target.value})} />
+                                : inst.location || 'N/A'}
+                            </td>
                             <td className="text-center">
                               <Badge variant="info">{inst.student_count}</Badge>
                             </td>
@@ -481,13 +518,43 @@ const AdminDashboard = () => {
                               </Badge>
                             </td>
                             <td className="text-center">
-                              <Button 
-                                size="sm" 
-                                variant="danger"
-                                onClick={() => deleteInstitute(inst.id)}
-                              >
-                                Delete
-                              </Button>
+                              <div className="flex items-center justify-center gap-2">
+                                {editingInstitute === inst.id ? (
+                                  <>
+                                    <button
+                                      onClick={() => saveEditInstitute(inst.id)}
+                                      title="Save"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-green-100 hover:bg-green-200 text-green-700 transition"
+                                    >
+                                      <i className="fas fa-check text-xs"></i>
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingInstitute(null)}
+                                      title="Cancel"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 transition"
+                                    >
+                                      <i className="fas fa-times text-xs"></i>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <>
+                                    <button
+                                      onClick={() => startEditInstitute(inst)}
+                                      title="Edit"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-100 hover:bg-blue-200 text-blue-700 transition"
+                                    >
+                                      <i className="fas fa-pen text-xs"></i>
+                                    </button>
+                                    <button
+                                      onClick={() => deleteInstitute(inst.id)}
+                                      title="Delete"
+                                      className="w-8 h-8 flex items-center justify-center rounded-full bg-red-100 hover:bg-red-200 text-red-700 transition"
+                                    >
+                                      <i className="fas fa-trash text-xs"></i>
+                                    </button>
+                                  </>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}
