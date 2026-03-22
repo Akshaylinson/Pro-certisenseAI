@@ -137,6 +137,22 @@ class AuditLog(Base):
     ip_address = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
+def run_migrations(engine):
+    """Add missing columns to existing tables without dropping data."""
+    from sqlalchemy import text, inspect
+    inspector = inspect(engine)
+    with engine.connect() as conn:
+        # verifications table migrations
+        if "verifications" in inspector.get_table_names():
+            existing = [c["name"] for c in inspector.get_columns("verifications")]
+            if "certificate_id" not in existing:
+                conn.execute(text("ALTER TABLE verifications ADD COLUMN certificate_id VARCHAR REFERENCES certificates(id)"))
+            if "blockchain_integrity" not in existing:
+                conn.execute(text("ALTER TABLE verifications ADD COLUMN blockchain_integrity BOOLEAN"))
+            if "is_suspicious" not in existing:
+                conn.execute(text("ALTER TABLE verifications ADD COLUMN is_suspicious BOOLEAN DEFAULT 0"))
+            conn.commit()
+
 def get_db():
     db = SessionLocal()
     try:
@@ -145,3 +161,4 @@ def get_db():
         db.close()
 
 Base.metadata.create_all(bind=engine)
+run_migrations(engine)
